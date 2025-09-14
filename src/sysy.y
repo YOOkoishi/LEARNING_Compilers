@@ -2,6 +2,7 @@
   #include <memory>
   #include <string>
   #include "ast.h"
+
 }
 
 %{
@@ -42,8 +43,8 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt 
-%type <int_val> Number
+%type <ast_val> FuncDef FuncType Block Stmt Number
+/* %type <int_val>  */
 
 %%
 
@@ -92,24 +93,24 @@ FuncType
 
 Block
   : '{' Stmt '}' {
-    auto stmt = new BlockAST();
-    stmt -> stmt = unique_ptr<BaseAST>($2);
-    $$ = stmt;
+    auto stmtt = new BlockAST();
+    stmtt -> stmt = unique_ptr<BaseAST>($2);
+    $$ = stmtt;
   }
   ;
 
 Stmt
   : RETURN Number ';' {
-    auto number = new StmtAST();
-    number -> number = unique_ptr<BaseAST>($2);
-    $$ = number;
+    auto numbr = new StmtAST();
+    numbr -> number = unique_ptr<BaseAST>($2);
+    $$ = numbr;
   }
   ;
 
 Number
   : INT_CONST {
     auto int_con = new NumberAST();
-    int_con -> int_const = *unique_ptr<int>($1);
+    int_con -> int_const = ($1);
     $$ = int_con;
   }
   ;
