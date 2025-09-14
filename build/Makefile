@@ -150,6 +150,60 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+sysy.lex.o: sysy.lex.cpp.o
+
+.PHONY : sysy.lex.o
+
+# target to build an object file
+sysy.lex.cpp.o:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.lex.cpp.o
+.PHONY : sysy.lex.cpp.o
+
+sysy.lex.i: sysy.lex.cpp.i
+
+.PHONY : sysy.lex.i
+
+# target to preprocess a source file
+sysy.lex.cpp.i:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.lex.cpp.i
+.PHONY : sysy.lex.cpp.i
+
+sysy.lex.s: sysy.lex.cpp.s
+
+.PHONY : sysy.lex.s
+
+# target to generate assembly for a file
+sysy.lex.cpp.s:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.lex.cpp.s
+.PHONY : sysy.lex.cpp.s
+
+sysy.tab.o: sysy.tab.cpp.o
+
+.PHONY : sysy.tab.o
+
+# target to build an object file
+sysy.tab.cpp.o:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.tab.cpp.o
+.PHONY : sysy.tab.cpp.o
+
+sysy.tab.i: sysy.tab.cpp.i
+
+.PHONY : sysy.tab.i
+
+# target to preprocess a source file
+sysy.tab.cpp.i:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.tab.cpp.i
+.PHONY : sysy.tab.cpp.i
+
+sysy.tab.s: sysy.tab.cpp.s
+
+.PHONY : sysy.tab.s
+
+# target to generate assembly for a file
+sysy.tab.cpp.s:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/sysy.tab.cpp.s
+.PHONY : sysy.tab.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -162,6 +216,12 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... sysy.lex.o"
+	@echo "... sysy.lex.i"
+	@echo "... sysy.lex.s"
+	@echo "... sysy.tab.o"
+	@echo "... sysy.tab.i"
+	@echo "... sysy.tab.s"
 .PHONY : help
 
 

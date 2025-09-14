@@ -3,3 +3,8 @@
 
 CMakeFiles/compiler.dir/src/main.cpp.o
  /root/compiler/src/main.cpp
+CMakeFiles/compiler.dir/sysy.lex.cpp.o
+ /root/compiler/build/sysy.lex.cpp
+ /root/compiler/build/sysy.tab.hpp
+CMakeFiles/compiler.dir/sysy.tab.cpp.o
+ /root/compiler/build/sysy.tab.cpp

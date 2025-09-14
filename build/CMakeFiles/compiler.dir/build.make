@@ -57,9 +57,20 @@ include CMakeFiles/compiler.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/compiler.dir/flags.make
 
+sysy.tab.cpp: ../src/sysy.y
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "[BISON][Parser] Building parser with bison 3.5.1"
+	cd /root/compiler && /usr/bin/bison -d -o /root/compiler/build/sysy.tab.cpp /root/compiler/src/sysy.y
+
+sysy.tab.hpp: sysy.tab.cpp
+	@$(CMAKE_COMMAND) -E touch_nocreate sysy.tab.hpp
+
+sysy.lex.cpp: ../src/sysy.l
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "[FLEX][Lexer] Building scanner with flex 2.6.4"
+	cd /root/compiler && /usr/bin/flex -o/root/compiler/build/sysy.lex.cpp /root/compiler/src/sysy.l
+
 CMakeFiles/compiler.dir/src/main.cpp.o: CMakeFiles/compiler.dir/flags.make
 CMakeFiles/compiler.dir/src/main.cpp.o: ../src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/compiler.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/compiler.dir/src/main.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/src/main.cpp.o -c /root/compiler/src/main.cpp
 
 CMakeFiles/compiler.dir/src/main.cpp.i: cmake_force
@@ -70,17 +81,48 @@ CMakeFiles/compiler.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/compiler.dir/src/main.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/compiler/src/main.cpp -o CMakeFiles/compiler.dir/src/main.cpp.s
 
+CMakeFiles/compiler.dir/sysy.lex.cpp.o: CMakeFiles/compiler.dir/flags.make
+CMakeFiles/compiler.dir/sysy.lex.cpp.o: sysy.lex.cpp
+CMakeFiles/compiler.dir/sysy.lex.cpp.o: sysy.tab.hpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/compiler.dir/sysy.lex.cpp.o"
+	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/sysy.lex.cpp.o -c /root/compiler/build/sysy.lex.cpp
+
+CMakeFiles/compiler.dir/sysy.lex.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/compiler.dir/sysy.lex.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/compiler/build/sysy.lex.cpp > CMakeFiles/compiler.dir/sysy.lex.cpp.i
+
+CMakeFiles/compiler.dir/sysy.lex.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/compiler.dir/sysy.lex.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/compiler/build/sysy.lex.cpp -o CMakeFiles/compiler.dir/sysy.lex.cpp.s
+
+CMakeFiles/compiler.dir/sysy.tab.cpp.o: CMakeFiles/compiler.dir/flags.make
+CMakeFiles/compiler.dir/sysy.tab.cpp.o: sysy.tab.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/compiler.dir/sysy.tab.cpp.o"
+	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/sysy.tab.cpp.o -c /root/compiler/build/sysy.tab.cpp
+
+CMakeFiles/compiler.dir/sysy.tab.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/compiler.dir/sysy.tab.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/compiler/build/sysy.tab.cpp > CMakeFiles/compiler.dir/sysy.tab.cpp.i
+
+CMakeFiles/compiler.dir/sysy.tab.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/compiler.dir/sysy.tab.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/compiler/build/sysy.tab.cpp -o CMakeFiles/compiler.dir/sysy.tab.cpp.s
+
 # Object files for target compiler
 compiler_OBJECTS = \
-"CMakeFiles/compiler.dir/src/main.cpp.o"
+"CMakeFiles/compiler.dir/src/main.cpp.o" \
+"CMakeFiles/compiler.dir/sysy.lex.cpp.o" \
+"CMakeFiles/compiler.dir/sysy.tab.cpp.o"
 
 # External object files for target compiler
 compiler_EXTERNAL_OBJECTS =
 
 compiler: CMakeFiles/compiler.dir/src/main.cpp.o
+compiler: CMakeFiles/compiler.dir/sysy.lex.cpp.o
+compiler: CMakeFiles/compiler.dir/sysy.tab.cpp.o
 compiler: CMakeFiles/compiler.dir/build.make
 compiler: CMakeFiles/compiler.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable compiler"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable compiler"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/compiler.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -92,7 +134,9 @@ CMakeFiles/compiler.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/compiler.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/compiler.dir/clean
 
-CMakeFiles/compiler.dir/depend:
+CMakeFiles/compiler.dir/depend: sysy.tab.cpp
+CMakeFiles/compiler.dir/depend: sysy.tab.hpp
+CMakeFiles/compiler.dir/depend: sysy.lex.cpp
 	cd /root/compiler/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /root/compiler /root/compiler /root/compiler/build /root/compiler/build /root/compiler/build/CMakeFiles/compiler.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/compiler.dir/depend
 
