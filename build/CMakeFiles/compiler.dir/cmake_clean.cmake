@@ -1,4 +1,5 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/compiler.dir/src/Ir.cpp.o"
   "CMakeFiles/compiler.dir/src/ast.cpp.o"
   "CMakeFiles/compiler.dir/src/main.cpp.o"
   "CMakeFiles/compiler.dir/sysy.lex.cpp.o"

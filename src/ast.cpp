@@ -5,7 +5,7 @@
 void CompUnitAST :: Dump() const {
     std::cout << "CompUnitAST { ";
     fun_def -> Dump();
-    std::cout << " }";
+    std::cout << " } ";
 }
 
 void FunDefAST :: Dump() const{

@@ -4,6 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/root/compiler/src/Ir.cpp" "/root/compiler/build/CMakeFiles/compiler.dir/src/Ir.cpp.o"
   "/root/compiler/src/ast.cpp" "/root/compiler/build/CMakeFiles/compiler.dir/src/ast.cpp.o"
   "/root/compiler/src/main.cpp" "/root/compiler/build/CMakeFiles/compiler.dir/src/main.cpp.o"
   "/root/compiler/build/sysy.lex.cpp" "/root/compiler/build/CMakeFiles/compiler.dir/sysy.lex.cpp.o"

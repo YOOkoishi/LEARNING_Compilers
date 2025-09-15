@@ -123,6 +123,33 @@ compiler/fast:
 	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/build
 .PHONY : compiler/fast
 
+src/Ir.o: src/Ir.cpp.o
+
+.PHONY : src/Ir.o
+
+# target to build an object file
+src/Ir.cpp.o:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir.cpp.o
+.PHONY : src/Ir.cpp.o
+
+src/Ir.i: src/Ir.cpp.i
+
+.PHONY : src/Ir.i
+
+# target to preprocess a source file
+src/Ir.cpp.i:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir.cpp.i
+.PHONY : src/Ir.cpp.i
+
+src/Ir.s: src/Ir.cpp.s
+
+.PHONY : src/Ir.s
+
+# target to generate assembly for a file
+src/Ir.cpp.s:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir.cpp.s
+.PHONY : src/Ir.cpp.s
+
 src/ast.o: src/ast.cpp.o
 
 .PHONY : src/ast.o
@@ -240,6 +267,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... compiler"
+	@echo "... src/Ir.o"
+	@echo "... src/Ir.i"
+	@echo "... src/Ir.s"
 	@echo "... src/ast.o"
 	@echo "... src/ast.i"
 	@echo "... src/ast.s"
