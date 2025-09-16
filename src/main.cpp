@@ -4,7 +4,8 @@
 #include <memory>
 #include <string>
 #include "ast.h"
-
+#include "Ir.h"
+#include "Ir_generator.h"
 
 using namespace std;
 
@@ -36,5 +37,8 @@ int main(int argc, const char *argv[]) {
   // 输出解析得到的 AST, 其实就是个字符串
   ast -> Dump();
   cout<<endl;
+
+  IRGenerator ir;
+  
   return 0;
 }
