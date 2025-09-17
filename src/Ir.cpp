@@ -27,11 +27,11 @@ void IRFunction::ADD_Block(std::unique_ptr<IRBasicBlock> block){
 }
 
 void IRFunction::DumpBlock() const{
-    std::cout << "fun " << function_name << " : " << functype << " {\n";
+    std::cout << "fun " << function_name << "() : " << functype << " {\n";
     for(const auto &block : ir_basicblock){
         block -> DumpValue();
     }
-    std::cout << "\n}\n";
+    std::cout << "\n}";
 }
 
 void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){

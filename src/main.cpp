@@ -29,14 +29,22 @@ int main(int argc, const char *argv[]) {
   yyin = fopen(input, "r");
   assert(yyin);
 
+
+  freopen(output,"w",stdout);
+
   // 调用 parser 函数, parser 函数会进一步调用 lexer 解析输入文件的
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
+  if(ret != 0){
+    fprintf(stderr, "ERROR: yyparse returned %d\n", ret);
+    fprintf(stderr, "Parse failed!\n");
+    return ret;
+  }
   assert(!ret);
 
   // 输出解析得到的 AST, 其实就是个字符串
-  ast -> Dump();
-  cout << endl;
+  // ast -> Dump();
+  // cout << endl;
 
   IRGenerator ir;
   if(ast){
