@@ -32,9 +32,18 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
 
     program ->ADD_Function(std::move(ir_fun));
 
+    IRFunction* current_func = program->ir_function.back().get();
+
+    auto entry_block = std::make_unique<IRBasicBlock>();
+    entry_block->block_name = "%entry" + std::to_string(blockcount++);
+    
+    current_func ->ADD_Block(std::move(entry_block));
+    
+    IRBasicBlock* current_block = current_func ->ir_basicblock.back().get();
+
     if (ast ->block){
         if(auto block = dynamic_cast<const BlockAST*>(ast->block.get())){
-            visitBlock(block);
+            visitBlock(block , current_block);
         }
     }
 }
@@ -43,8 +52,35 @@ void IRGenerator::visitFunType(const FunTypeAST* ast){
 
 }
 
-void IRGenerator::visitBlock(const BlockAST* ast){
+void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
     if(!ast) return;
-    blockcount++;
+    if(ast -> stmt){
+        if(auto stmt = dynamic_cast<const StmtAST*>(ast ->stmt.get())){
+            visitStmt(stmt ,current_block);
+        }
+    }
+}
+
+void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
+    if(!ast)return;
+    if(ast ->retrn == "return" && ast->number){
+        if(auto num = dynamic_cast<const NumberAST*>(ast->number.get())){
+            auto ir_value = std::make_unique<ReturnIRValue>();
+            current_block->ADD_Value(std::move(ir_value));
+            visitNumber(num ,current_block);
+        }
+
+    }
+}
+
+void IRGenerator::visitNumber(const NumberAST* ast,IRBasicBlock* current_block){
+    if(!ast)return;
     
+    auto int_value = std::make_unique<IntegerIRValue>();
+    int_value->value = ast ->int_const;
+    current_block ->ADD_Value(std::move(int_value));
+}
+
+std::unique_ptr<IRProgram> IRGenerator::get_irprogram(){
+    return std::move(program);
 }

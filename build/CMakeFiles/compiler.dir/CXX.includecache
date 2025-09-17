@@ -7,10 +7,18 @@
 #IncludeRegexTransform: 
 
 /root/compiler/src/Ir.cpp
-
-/root/compiler/src/ast.h
 include.h
 /root/compiler/src/include.h
+Ir.h
+/root/compiler/src/Ir.h
+
+/root/compiler/src/Ir.h
+memory
+-
+vector
+-
+string
+-
 
 /root/compiler/src/include.h
 cassert
@@ -23,18 +31,4 @@ memory
 -
 string
 -
-
-/root/compiler/src/main.cpp
-cassert
--
-cstdio
--
-iostream
--
-memory
--
-string
--
-ast.h
-/root/compiler/src/ast.h
 

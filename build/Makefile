@@ -150,6 +150,33 @@ src/Ir.cpp.s:
 	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir.cpp.s
 .PHONY : src/Ir.cpp.s
 
+src/Ir_generator.o: src/Ir_generator.cpp.o
+
+.PHONY : src/Ir_generator.o
+
+# target to build an object file
+src/Ir_generator.cpp.o:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir_generator.cpp.o
+.PHONY : src/Ir_generator.cpp.o
+
+src/Ir_generator.i: src/Ir_generator.cpp.i
+
+.PHONY : src/Ir_generator.i
+
+# target to preprocess a source file
+src/Ir_generator.cpp.i:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir_generator.cpp.i
+.PHONY : src/Ir_generator.cpp.i
+
+src/Ir_generator.s: src/Ir_generator.cpp.s
+
+.PHONY : src/Ir_generator.s
+
+# target to generate assembly for a file
+src/Ir_generator.cpp.s:
+	$(MAKE) -f CMakeFiles/compiler.dir/build.make CMakeFiles/compiler.dir/src/Ir_generator.cpp.s
+.PHONY : src/Ir_generator.cpp.s
+
 src/ast.o: src/ast.cpp.o
 
 .PHONY : src/ast.o
@@ -270,6 +297,9 @@ help:
 	@echo "... src/Ir.o"
 	@echo "... src/Ir.i"
 	@echo "... src/Ir.s"
+	@echo "... src/Ir_generator.o"
+	@echo "... src/Ir_generator.i"
+	@echo "... src/Ir_generator.s"
 	@echo "... src/ast.o"
 	@echo "... src/ast.i"
 	@echo "... src/ast.s"

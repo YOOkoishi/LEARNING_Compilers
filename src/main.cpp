@@ -36,9 +36,17 @@ int main(int argc, const char *argv[]) {
 
   // 输出解析得到的 AST, 其实就是个字符串
   ast -> Dump();
-  cout<<endl;
+  cout << endl;
 
   IRGenerator ir;
-  
+  if(ast){
+    if(auto tp_ast = dynamic_cast<const CompUnitAST*>(ast.get())){
+      ir.visitCompUnit(tp_ast);
+    }
+  }
+
+  auto ir_fin = ir.get_irprogram();
+  ir_fin -> DumpFunction();
+  cout << endl;
   return 0;
 }

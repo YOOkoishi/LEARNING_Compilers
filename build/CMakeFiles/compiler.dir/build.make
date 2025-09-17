@@ -81,9 +81,22 @@ CMakeFiles/compiler.dir/src/Ir.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/compiler.dir/src/Ir.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/compiler/src/Ir.cpp -o CMakeFiles/compiler.dir/src/Ir.cpp.s
 
+CMakeFiles/compiler.dir/src/Ir_generator.cpp.o: CMakeFiles/compiler.dir/flags.make
+CMakeFiles/compiler.dir/src/Ir_generator.cpp.o: ../src/Ir_generator.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/compiler.dir/src/Ir_generator.cpp.o"
+	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/src/Ir_generator.cpp.o -c /root/compiler/src/Ir_generator.cpp
+
+CMakeFiles/compiler.dir/src/Ir_generator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/compiler.dir/src/Ir_generator.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /root/compiler/src/Ir_generator.cpp > CMakeFiles/compiler.dir/src/Ir_generator.cpp.i
+
+CMakeFiles/compiler.dir/src/Ir_generator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/compiler.dir/src/Ir_generator.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /root/compiler/src/Ir_generator.cpp -o CMakeFiles/compiler.dir/src/Ir_generator.cpp.s
+
 CMakeFiles/compiler.dir/src/ast.cpp.o: CMakeFiles/compiler.dir/flags.make
 CMakeFiles/compiler.dir/src/ast.cpp.o: ../src/ast.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/compiler.dir/src/ast.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/compiler.dir/src/ast.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/src/ast.cpp.o -c /root/compiler/src/ast.cpp
 
 CMakeFiles/compiler.dir/src/ast.cpp.i: cmake_force
@@ -96,7 +109,7 @@ CMakeFiles/compiler.dir/src/ast.cpp.s: cmake_force
 
 CMakeFiles/compiler.dir/src/main.cpp.o: CMakeFiles/compiler.dir/flags.make
 CMakeFiles/compiler.dir/src/main.cpp.o: ../src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/compiler.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/compiler.dir/src/main.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/src/main.cpp.o -c /root/compiler/src/main.cpp
 
 CMakeFiles/compiler.dir/src/main.cpp.i: cmake_force
@@ -110,7 +123,7 @@ CMakeFiles/compiler.dir/src/main.cpp.s: cmake_force
 CMakeFiles/compiler.dir/sysy.lex.cpp.o: CMakeFiles/compiler.dir/flags.make
 CMakeFiles/compiler.dir/sysy.lex.cpp.o: sysy.lex.cpp
 CMakeFiles/compiler.dir/sysy.lex.cpp.o: sysy.tab.hpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/compiler.dir/sysy.lex.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/compiler.dir/sysy.lex.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/sysy.lex.cpp.o -c /root/compiler/build/sysy.lex.cpp
 
 CMakeFiles/compiler.dir/sysy.lex.cpp.i: cmake_force
@@ -123,7 +136,7 @@ CMakeFiles/compiler.dir/sysy.lex.cpp.s: cmake_force
 
 CMakeFiles/compiler.dir/sysy.tab.cpp.o: CMakeFiles/compiler.dir/flags.make
 CMakeFiles/compiler.dir/sysy.tab.cpp.o: sysy.tab.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/compiler.dir/sysy.tab.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/compiler.dir/sysy.tab.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/compiler.dir/sysy.tab.cpp.o -c /root/compiler/build/sysy.tab.cpp
 
 CMakeFiles/compiler.dir/sysy.tab.cpp.i: cmake_force
@@ -137,6 +150,7 @@ CMakeFiles/compiler.dir/sysy.tab.cpp.s: cmake_force
 # Object files for target compiler
 compiler_OBJECTS = \
 "CMakeFiles/compiler.dir/src/Ir.cpp.o" \
+"CMakeFiles/compiler.dir/src/Ir_generator.cpp.o" \
 "CMakeFiles/compiler.dir/src/ast.cpp.o" \
 "CMakeFiles/compiler.dir/src/main.cpp.o" \
 "CMakeFiles/compiler.dir/sysy.lex.cpp.o" \
@@ -146,13 +160,14 @@ compiler_OBJECTS = \
 compiler_EXTERNAL_OBJECTS =
 
 compiler: CMakeFiles/compiler.dir/src/Ir.cpp.o
+compiler: CMakeFiles/compiler.dir/src/Ir_generator.cpp.o
 compiler: CMakeFiles/compiler.dir/src/ast.cpp.o
 compiler: CMakeFiles/compiler.dir/src/main.cpp.o
 compiler: CMakeFiles/compiler.dir/sysy.lex.cpp.o
 compiler: CMakeFiles/compiler.dir/sysy.tab.cpp.o
 compiler: CMakeFiles/compiler.dir/build.make
 compiler: CMakeFiles/compiler.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable compiler"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/root/compiler/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable compiler"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/compiler.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
