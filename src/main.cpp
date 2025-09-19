@@ -54,7 +54,9 @@ int main(int argc, const char *argv[]) {
   }
 
   auto ir_fin = ir.get_irprogram();
-  ir_fin -> DumpFunction();
+  std::string mode_str(mode);
+  if(mode_str == "-koopa")ir_fin -> DumpFunction();
+  else if(mode_str == "-riscv")ir_fin -> To_RiscV();
   cout << endl;
   return 0;
 }

@@ -21,7 +21,7 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
     if(!ast) return;
     
     auto ir_fun = std::make_unique<IRFunction>(); 
-    ir_fun -> function_name = "@" + (ast -> ident);
+    ir_fun -> function_name = (ast -> ident);
     
     if (ast -> fun_type){
         if (auto fun_type = dynamic_cast<const FunTypeAST*>(ast ->fun_type.get())){
@@ -65,9 +65,8 @@ void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
     if(ast ->retrn == "return" && ast->number){
         if(auto num = dynamic_cast<const NumberAST*>(ast->number.get())){
-            auto ir_value = std::make_unique<ReturnIRValue>();
+            auto ir_value = std::make_unique<ReturnIRValue>(num ->int_const);
             current_block->ADD_Value(std::move(ir_value));
-            visitNumber(num ,current_block);
         }
 
     }

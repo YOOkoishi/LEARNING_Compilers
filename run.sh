@@ -7,7 +7,7 @@ PROJECT_DIR=$(pwd)
 if [ "$1" = "test" ]; then
     # 测试模式：运行 autotest
     sudo docker run -it --rm -v $PROJECT_DIR:/root/compiler maxxing/compiler-dev \
-        autotest -koopa -s "$2" /root/compiler
+        autotest "$2" -s "$3" /root/compiler
 else
     # 默认模式：进入交互式 bash
     sudo docker run -it --rm -v $PROJECT_DIR:/root/compiler maxxing/compiler-dev bash -c "

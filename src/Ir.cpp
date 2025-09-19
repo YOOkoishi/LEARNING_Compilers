@@ -2,7 +2,7 @@
 #include "Ir.h"
 
 void ReturnIRValue::Dump() const{
-    std::cout<<"ret ";
+    std::cout<<"ret "<<return_value<<" ";
 }
 
 void IntegerIRValue::Dump() const{
@@ -27,7 +27,7 @@ void IRFunction::ADD_Block(std::unique_ptr<IRBasicBlock> block){
 }
 
 void IRFunction::DumpBlock() const{
-    std::cout << "fun " << function_name << "() : " << functype << " {\n";
+    std::cout << "fun @" << function_name << "() : " << functype << " {\n";
     for(const auto &block : ir_basicblock){
         block -> DumpValue();
     }
@@ -42,4 +42,35 @@ void IRProgram::DumpFunction() const{
     for(const auto &fun : ir_function){
         fun -> DumpBlock();
     }
+}
+
+void IRProgram::To_RiscV() const{
+    std::cout<<"  .text"<<std::endl;
+    for(const auto &fun : ir_function){
+        fun -> To_RiscV();
+    }
+}
+
+void IRFunction::To_RiscV() const{
+    std::cout<<"  .global "<<function_name<<std::endl;
+    std::cout<<function_name<<":\n";
+    for(const auto &block : ir_basicblock){
+        block ->To_RiscV();
+    }
+}
+
+void IRBasicBlock::To_RiscV() const{
+    for(const auto &val : ir_value){
+        val ->To_RiscV();
+        std::cout<<std::endl;
+    }
+}
+
+void ReturnIRValue::To_RiscV() const{
+    std::cout<<"  li a0, "<<return_value<<std::endl;
+    std::cout<<"  ret";
+}
+
+void IntegerIRValue::To_RiscV() const{
+    std::cout<<"  li a0, "<<value;
 }
