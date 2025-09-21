@@ -85,7 +85,7 @@ FuncDef
 FuncType
   : INT {
     auto ast = new FunTypeAST();
-    ast -> tp = "int";
+    ast -> tp = *unique_ptr<string>($1);
     $$ = ast;
 
   }
@@ -109,37 +109,50 @@ Stmt
 
 Exp 
   : UnaryExp {
-
+    auto exp = new ExpAST();
+    exp -> unaryexp = unique_ptr<BaseAST>($1);
+    $$ = exp;
   }
   ;
 
 PrimaryExp
   : '(' Exp ')'{
-
+    auto primaryexp = new PrimaryExpAST();
+    primaryexp -> exp = unique_ptr<BaseAST>($2);
+    $$ = primaryexp;
   } 
   | Number {
-
+    auto primaryexp = new PrimaryExpAST();
+    primaryexp -> number = unique_ptr<BaseAST>($1);
+    $$ = primaryexp;
   }
   ;
 
 UnaryExp
   : PrimaryExp {
-
+    auto unaryexp = new UnaryExpAST();
+    unaryexp -> primaryexp = unique_ptr<BaseAST>($1);
+    $$ = unaryexp;
   }
   | UnaryOp UnaryExp{
-
+    auto unaryexp = new UnaryExpAST();
+    unaryexp -> unaryop = unique_ptr<BaseAST>($1);
+    unaryexp -> unaryexp = unique_ptr<BaseAST>($2);
   }
   ;
 
 UnaryOp
   : '+'{
-
+    auto unaryop = new UnaryOpAST();
+    unaryop -> op = '+';
   }
   | '-'{
-
+    auto unaryop = new UnaryOpAST();
+    unaryop -> op = '-';
   }
   | '!'{
-
+    auto unaryop = new UnaryOpAST();
+    unaryop -> op = '!';
   }
   ;
 
