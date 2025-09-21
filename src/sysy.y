@@ -43,7 +43,7 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp 
 /* %type <int_val>  */
 
 %%
@@ -100,10 +100,46 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
+  : RETURN Exp ';' {
     auto numbr = new StmtAST();
     numbr -> number = unique_ptr<BaseAST>($2);
     $$ = numbr;
+  }
+  ;
+
+Exp 
+  : UnaryExp {
+
+  }
+  ;
+
+PrimaryExp
+  : '(' Exp ')'{
+
+  } 
+  | Number {
+
+  }
+  ;
+
+UnaryExp
+  : PrimaryExp {
+
+  }
+  | UnaryOp UnaryExp{
+
+  }
+  ;
+
+UnaryOp
+  : '+'{
+
+  }
+  | '-'{
+
+  }
+  | '!'{
+
   }
   ;
 
