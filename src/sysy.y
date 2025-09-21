@@ -93,17 +93,17 @@ FuncType
 
 Block
   : '{' Stmt '}' {
-    auto stmtt = new BlockAST();
-    stmtt -> stmt = unique_ptr<BaseAST>($2);
-    $$ = stmtt;
+    auto block = new BlockAST();
+    block -> stmt = unique_ptr<BaseAST>($2);
+    $$ = block;
   }
   ;
 
 Stmt
   : RETURN Exp ';' {
-    auto numbr = new StmtAST();
-    numbr -> number = unique_ptr<BaseAST>($2);
-    $$ = numbr;
+    auto stmt = new StmtAST();
+    stmt -> exp = unique_ptr<BaseAST>($2);
+    $$ = stmt;
   }
   ;
 
@@ -117,12 +117,12 @@ Exp
 
 PrimaryExp
   : '(' Exp ')'{
-    auto primaryexp = new PrimaryExpAST();
+    auto primaryexp = new PrimaryExpAST(PrimaryExpAST::EXP);
     primaryexp -> exp = unique_ptr<BaseAST>($2);
     $$ = primaryexp;
   } 
   | Number {
-    auto primaryexp = new PrimaryExpAST();
+    auto primaryexp = new PrimaryExpAST(PrimaryExpAST::NUMBER);
     primaryexp -> number = unique_ptr<BaseAST>($1);
     $$ = primaryexp;
   }
@@ -130,14 +130,15 @@ PrimaryExp
 
 UnaryExp
   : PrimaryExp {
-    auto unaryexp = new UnaryExpAST();
+    auto unaryexp = new UnaryExpAST(UnaryExpAST::PRIMARYEXP);
     unaryexp -> primaryexp = unique_ptr<BaseAST>($1);
     $$ = unaryexp;
   }
   | UnaryOp UnaryExp{
-    auto unaryexp = new UnaryExpAST();
+    auto unaryexp = new UnaryExpAST(UnaryExpAST::UNARYEXP);
     unaryexp -> unaryop = unique_ptr<BaseAST>($1);
     unaryexp -> unaryexp = unique_ptr<BaseAST>($2);
+    $$ = unaryexp;
   }
   ;
 
@@ -145,14 +146,17 @@ UnaryOp
   : '+'{
     auto unaryop = new UnaryOpAST();
     unaryop -> op = '+';
+    $$ = unaryop;
   }
   | '-'{
     auto unaryop = new UnaryOpAST();
     unaryop -> op = '-';
+    $$ = unaryop;
   }
   | '!'{
     auto unaryop = new UnaryOpAST();
     unaryop -> op = '!';
+    $$ = unaryop;
   }
   ;
 

@@ -2,6 +2,10 @@
 
 #include "include.h"
 
+//  定义 AST 中的 各种类型
+
+
+
 class BaseAST {
 public:
     virtual ~BaseAST() = default;
@@ -37,7 +41,7 @@ public:
 class StmtAST : public BaseAST {
 public:
     std::string retrn = "return";
-    std::unique_ptr<BaseAST> number;
+    std::unique_ptr<BaseAST> exp;
     std::string fenhao = ";";
     void Dump() const override;
 };
@@ -56,13 +60,20 @@ public:
 
 class PrimaryExpAST : public BaseAST{
 public:
+    enum Type { EXP, NUMBER } type;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> number;
+
+    PrimaryExpAST(Type t) : type(t){};
+
     void Dump() const override;
 };
 
 class UnaryExpAST : public BaseAST {
 public:
+    enum Type {PRIMARYEXP , UNARYEXP} type;
+
+    UnaryExpAST(Type t) : type(t){};
     std::unique_ptr<BaseAST> primaryexp;
     std::unique_ptr<BaseAST> unaryop;
     std::unique_ptr<BaseAST> unaryexp;

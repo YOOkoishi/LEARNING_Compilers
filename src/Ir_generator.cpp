@@ -63,10 +63,10 @@ void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
 
 void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
-    if(ast ->retrn == "return" && ast->number){
-        if(auto num = dynamic_cast<const NumberAST*>(ast->number.get())){
-            auto ir_value = std::make_unique<ReturnIRValue>(num ->int_const);
-            current_block->ADD_Value(std::move(ir_value));
+    if(ast ->retrn == "return" && ast->exp){
+        if(auto num = dynamic_cast<const NumberAST*>(ast->exp.get())){
+            // auto ir_value = std::make_unique<ReturnIRValue>(num ->int_const);
+            // current_block->ADD_Value(std::move(ir_value));
         }
 
     }

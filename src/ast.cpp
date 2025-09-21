@@ -32,11 +32,29 @@ void BlockAST :: Dump() const{
 void StmtAST :: Dump() const{
     std::cout << "StmtAST { ";
     std::cout << retrn;
-    number -> Dump();
+    exp -> Dump();
     std::cout << fenhao;
     std::cout << " } ";
 }
 
 void NumberAST :: Dump() const{
     std::cout << int_const;
+}
+
+void ExpAST :: Dump() const{
+    std::cout<<"ExpAST { ";
+    unaryexp ->Dump();
+    std::cout<<" }";
+}
+
+void PrimaryExpAST::Dump() const{
+
+}
+
+void UnaryExpAST :: Dump() const{
+
+}
+
+void UnaryOpAST :: Dump() const{
+
 }
