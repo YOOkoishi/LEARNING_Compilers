@@ -85,7 +85,7 @@ FuncDef
 FuncType
   : INT {
     auto ast = new FunTypeAST();
-    ast -> tp = *unique_ptr<string>($1);
+    ast -> tp = "int";
     $$ = ast;
 
   }
