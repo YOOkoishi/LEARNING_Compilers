@@ -43,6 +43,14 @@ public:
     void To_RiscV() const override;
 };
 
+class BinaryIRValueb : public BaseIRValue{
+public:
+
+};
+
+
+
+
 class IRBasicBlock {
 public:
     std::string block_name;
