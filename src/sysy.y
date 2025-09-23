@@ -145,17 +145,17 @@ UnaryExp
 UnaryOp
   : '+'{
     auto unaryop = new UnaryOpAST();
-    unaryop -> op = '+';
+    unaryop -> op = "+";
     $$ = unaryop;
   }
   | '-'{
     auto unaryop = new UnaryOpAST();
-    unaryop -> op = '-';
+    unaryop -> op = "-";
     $$ = unaryop;
   }
   | '!'{
     auto unaryop = new UnaryOpAST();
-    unaryop -> op = '!';
+    unaryop -> op = "!";
     $$ = unaryop;
   }
   ;

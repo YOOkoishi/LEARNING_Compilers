@@ -11,15 +11,22 @@ class IRGenerator {
 private:
     std::unique_ptr<IRProgram> program;
     static int blockcount;
+    int temp_counter = 0;
+    std::string generate_temp_name() {
+        return "%" + std::to_string(temp_counter++);
+    }
     
 public:
     IRGenerator();
     void visitCompUnit(const CompUnitAST* ast);
     void visitFunDef(const FunDefAST* ast);
     void visitFunType(const FunTypeAST* ast);
-    void visitBlock(const BlockAST* ast,IRBasicBlock* current_block);
-    void visitStmt(const StmtAST* ast,IRBasicBlock* current_block);
-    void visitNumber(const NumberAST* ast,IRBasicBlock* current_block);
-    void visitExp(const ExpAST* ast,IRBasicBlock* current_block);
+    void visitBlock(const BlockAST* ast, IRBasicBlock* current_block);
+    void visitStmt(const StmtAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block);
+    void visitUnaryOp(const UnaryOpAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitNumber(const NumberAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<IRProgram> get_irprogram();
 };

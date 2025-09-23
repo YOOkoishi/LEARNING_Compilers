@@ -64,20 +64,62 @@ void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
 void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
     if(ast ->retrn == "return" && ast->exp){
-        if(auto num = dynamic_cast<const NumberAST*>(ast->exp.get())){
-            // auto ir_value = std::make_unique<ReturnIRValue>(num ->int_const);
-            // current_block->ADD_Value(std::move(ir_value));
+        if(auto exp = dynamic_cast<const ExpAST*>(ast->exp.get())){
+           visitExp(exp , current_block); 
         }
 
     }
 }
 
-void IRGenerator::visitNumber(const NumberAST* ast,IRBasicBlock* current_block){
+std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
-    
+    if(ast ->unaryexp){
+        if(auto unaryexp = dynamic_cast<UnaryExpAST*>(ast ->unaryexp.get())){
+            visitUnaryExp(unaryexp,current_block);
+        }
+    }
+}
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block){
+    if(!ast) return;
+    if(ast ->PRIMARYEXP){
+        if(auto primary = dynamic_cast<PrimaryExpAST*>(ast->primaryexp.get())){
+            visitPrimaryExp(primary , current_block);
+        }   
+    }
+    else if(ast ->UNARYEXP){
+        if(auto unaryexp = dynamic_cast<UnaryExpAST*>(ast ->unaryexp.get())){
+            visitUnaryExp(unaryexp , current_block);
+        }
+    }
+}
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block){
+    if(!ast) return;
+    if(ast -> type == PrimaryExpAST::EXP){
+
+    }
+    else if(ast-> type == PrimaryExpAST::NUMBER){
+        if(auto number = dynamic_cast<NumberAST*>(ast->number.get())){
+            return visitNumber(number , current_block);
+        } 
+    }
+}
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryOp(const UnaryOpAST* ast,IRBasicBlock* current_block){
+
+
+}
+
+
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitNumber(const NumberAST* ast,IRBasicBlock* current_block){
+    if(!ast) return nullptr;
+
     auto int_value = std::make_unique<IntegerIRValue>();
     int_value->value = ast ->int_const;
-    current_block ->ADD_Value(std::move(int_value));
+    return std::move(int_value);
 }
 
 std::unique_ptr<IRProgram> IRGenerator::get_irprogram(){
