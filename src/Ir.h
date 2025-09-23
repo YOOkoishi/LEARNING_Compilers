@@ -43,9 +43,32 @@ public:
     void To_RiscV() const override;
 };
 
-class BinaryIRValueb : public BaseIRValue{
+class BinaryIRValue : public BaseIRValue{
 public:
+    enum Operation {
+        ADD , SUB , MUL , DIV , MOD,
+        NE , EQ , GT , LT , GE ,LE ,
+        AND , OR , XOR , SHL , SHR , SAR
+    } operation;
+    std::unique_ptr<BaseIRValue> left;
+    std::unique_ptr<BaseIRValue> right;
+    std::string result_name;
 
+    BinaryIRValue(
+        Operation op,
+        std::unique_ptr<BaseIRValue> l ,
+        std::unique_ptr<BaseIRValue> r ,
+        const std::string& result = ""
+    )
+    :    
+        operation(op),
+        left(std::move(l)) , 
+        right(std::move(r)) , 
+        result_name(result)
+    {};
+
+    void Dump() const override;
+    void To_RiscV() const override;
 };
 
 

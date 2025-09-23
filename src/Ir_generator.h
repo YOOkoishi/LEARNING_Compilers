@@ -20,5 +20,6 @@ public:
     void visitBlock(const BlockAST* ast,IRBasicBlock* current_block);
     void visitStmt(const StmtAST* ast,IRBasicBlock* current_block);
     void visitNumber(const NumberAST* ast,IRBasicBlock* current_block);
+    void visitExp(const ExpAST* ast,IRBasicBlock* current_block);
     std::unique_ptr<IRProgram> get_irprogram();
 };
