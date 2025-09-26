@@ -26,7 +26,6 @@ public:
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block);
-    void visitUnaryOp(const UnaryOpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitNumber(const NumberAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<IRProgram> get_irprogram();
 };

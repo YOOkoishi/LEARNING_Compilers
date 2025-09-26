@@ -30,8 +30,7 @@ public:
 
 class ReturnIRValue : public BaseIRValue{
 public:
-    int return_value;  
-    ReturnIRValue(int val) : return_value(val) {}
+    std::unique_ptr<BaseIRValue> return_value;  
     void Dump() const override;
     void To_RiscV() const override;
 };
@@ -53,7 +52,7 @@ public:
     std::unique_ptr<BaseIRValue> left;
     std::unique_ptr<BaseIRValue> right;
     std::string result_name;
-
+    BinaryIRValue(){};
     BinaryIRValue(
         Operation op,
         std::unique_ptr<BaseIRValue> l ,
@@ -71,7 +70,12 @@ public:
     void To_RiscV() const override;
 };
 
-
+class TemporaryIRValue : public BaseIRValue{
+public :
+    std::string temp_name;
+    void Dump() const override;
+    void To_RiscV() const override;
+};
 
 
 class IRBasicBlock {

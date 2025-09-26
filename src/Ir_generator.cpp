@@ -65,52 +65,91 @@ void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
     if(ast ->retrn == "return" && ast->exp){
         if(auto exp = dynamic_cast<const ExpAST*>(ast->exp.get())){
-           visitExp(exp , current_block); 
+           auto result = visitExp(exp , current_block);
+           auto ret_ir = std::make_unique<ReturnIRValue>();
+           ret_ir ->return_value = std::move(result);
+           current_block -> ADD_Value(std::move(ret_ir)); 
         }
 
     }
 }
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast , IRBasicBlock* current_block){
-    if(!ast)return;
+    if(!ast)return nullptr;
     if(ast ->unaryexp){
         if(auto unaryexp = dynamic_cast<UnaryExpAST*>(ast ->unaryexp.get())){
-            visitUnaryExp(unaryexp,current_block);
+           return visitUnaryExp(unaryexp,current_block);
         }
     }
+    return nullptr;
 }
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block){
-    if(!ast) return;
-    if(ast ->PRIMARYEXP){
+    if(!ast) return nullptr;
+    if(ast ->type == UnaryExpAST::PRIMARYEXP){
         if(auto primary = dynamic_cast<PrimaryExpAST*>(ast->primaryexp.get())){
-            visitPrimaryExp(primary , current_block);
+            return visitPrimaryExp(primary , current_block);
         }   
     }
-    else if(ast ->UNARYEXP){
+    else if(ast ->type == UnaryExpAST::UNARYEXP){
         if(auto unaryexp = dynamic_cast<UnaryExpAST*>(ast ->unaryexp.get())){
-            visitUnaryExp(unaryexp , current_block);
+            if(ast ->unaryop == "+"){
+                return visitUnaryExp(unaryexp , current_block);
+            }
+            else if(ast -> unaryop == "-"){
+                auto zero = std::make_unique<IntegerIRValue>();
+                zero ->value = 0;
+
+                auto subval = std::make_unique<BinaryIRValue>();
+                subval -> operation = BinaryIRValue::SUB;
+                subval -> left = std::move(zero);
+                subval -> right = visitUnaryExp(unaryexp , current_block);
+                subval -> result_name = generate_temp_name();
+                
+                auto temp_name = std::make_unique<TemporaryIRValue>();
+                temp_name ->temp_name = subval ->result_name;
+               
+                current_block->ADD_Value(std::move(subval));
+
+                return std::move(temp_name);
+            }
+            else if(ast -> unaryop == "!"){
+                auto zero = std::make_unique<IntegerIRValue>();
+                zero ->value = 0;
+
+                auto eqval = std::make_unique<BinaryIRValue>();
+                eqval -> operation = BinaryIRValue::EQ;
+                eqval -> left = visitUnaryExp(unaryexp , current_block);
+                eqval -> right = std::move(zero);
+                eqval -> result_name = generate_temp_name();
+
+                auto temp_name = std::make_unique<TemporaryIRValue>() ;
+
+                temp_name ->temp_name = eqval ->result_name;
+
+                current_block ->ADD_Value(std::move(eqval));
+
+                return std::move(temp_name);
+            }
         }
     }
+    return nullptr;
 }
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block){
-    if(!ast) return;
+    if(!ast) return nullptr;
     if(ast -> type == PrimaryExpAST::EXP){
-
+        if(auto exp = dynamic_cast<ExpAST*>(ast->exp.get())){
+            return visitExp(exp , current_block);
+        }
     }
     else if(ast-> type == PrimaryExpAST::NUMBER){
         if(auto number = dynamic_cast<NumberAST*>(ast->number.get())){
             return visitNumber(number , current_block);
         } 
     }
+    return nullptr;
 }
-
-std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryOp(const UnaryOpAST* ast,IRBasicBlock* current_block){
-
-
-}
-
 
 
 
@@ -121,6 +160,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitNumber(const NumberAST* ast,IRBas
     int_value->value = ast ->int_const;
     return std::move(int_value);
 }
+
 
 std::unique_ptr<IRProgram> IRGenerator::get_irprogram(){
     return std::move(program);

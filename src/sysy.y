@@ -43,8 +43,9 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp 
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp  
 /* %type <int_val>  */
+%type <str_val> UnaryOp
 
 %%
 
@@ -136,7 +137,7 @@ UnaryExp
   }
   | UnaryOp UnaryExp{
     auto unaryexp = new UnaryExpAST(UnaryExpAST::UNARYEXP);
-    unaryexp -> unaryop = unique_ptr<BaseAST>($1);
+    unaryexp -> unaryop = *unique_ptr<std::string>($1);
     unaryexp -> unaryexp = unique_ptr<BaseAST>($2);
     $$ = unaryexp;
   }
@@ -144,19 +145,13 @@ UnaryExp
 
 UnaryOp
   : '+'{
-    auto unaryop = new UnaryOpAST();
-    unaryop -> op = "+";
-    $$ = unaryop;
+    $$ = new std::string("+");
   }
   | '-'{
-    auto unaryop = new UnaryOpAST();
-    unaryop -> op = "-";
-    $$ = unaryop;
+    $$ = new std::string("-");
   }
   | '!'{
-    auto unaryop = new UnaryOpAST();
-    unaryop -> op = "!";
-    $$ = unaryop;
+    $$ = new std::string("!");
   }
   ;
 

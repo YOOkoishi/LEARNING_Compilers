@@ -75,13 +75,13 @@ public:
 
     UnaryExpAST(Type t) : type(t){};
     std::unique_ptr<BaseAST> primaryexp;
-    std::unique_ptr<BaseAST> unaryop;
+    std::string unaryop;
     std::unique_ptr<BaseAST> unaryexp;
     void Dump() const override;
 };
 
 class UnaryOpAST : public BaseAST {
 public:
-    std::string op;
+    char op;
     void Dump() const override;
 };
