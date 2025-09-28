@@ -5,9 +5,11 @@
 
 int IRGenerator::blockcount = 0;
 
+
 IRGenerator::IRGenerator() : program(std::make_unique<IRProgram>()){
 
 }
+
 
 void IRGenerator::visitCompUnit(const CompUnitAST* ast){
     if(ast && ast -> fun_def){
@@ -16,6 +18,7 @@ void IRGenerator::visitCompUnit(const CompUnitAST* ast){
         }
     } 
 }
+
 
 void IRGenerator::visitFunDef(const FunDefAST* ast){
     if(!ast) return;
@@ -48,9 +51,11 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
     }
 }
 
+
 void IRGenerator::visitFunType(const FunTypeAST* ast){
 
 }
+
 
 void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
     if(!ast) return;
@@ -60,6 +65,7 @@ void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
         }
     }
 }
+
 
 void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     if(!ast)return;
@@ -74,15 +80,132 @@ void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
     }
 }
 
+
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast , IRBasicBlock* current_block){
     if(!ast)return nullptr;
     if(ast ->addexp){
-        if(auto addexp = dynamic_cast<UnaryExpAST*>(ast ->addexp.get())){
-           return visitUnaryExp(addexp,current_block);
+        if(auto addexp = dynamic_cast<AddExpAST*>(ast ->addexp.get())){
+           return visitAddExp(addexp,current_block);
         }
     }
     return nullptr;
 }
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast , IRBasicBlock* current_block){
+    if(!ast) return nullptr;
+    if(ast ->type == MulExpAST::UNARYEXP){
+        if(auto unaryexp = dynamic_cast<UnaryExpAST*>(ast -> unrayexp.get())){
+            return visitUnaryExp(unaryexp , current_block);
+        }
+    }
+    else if(ast ->type == MulExpAST::MULOPUNRAY){
+        if(auto mulexp = dynamic_cast<MulExpAST*>(ast->mulexp.get())){
+            if(auto unrayexp = dynamic_cast<UnaryExpAST*>(ast ->unrayexp.get())){
+                if(ast ->op == "*"){
+                    auto mulval = std::make_unique<BinaryIRValue>();
+                    mulval -> operation = BinaryIRValue::MUL;
+                    mulval -> left = visitMulExp(mulexp , current_block);
+                    mulval -> right = visitUnaryExp(unrayexp , current_block);
+                    mulval -> result_name = generate_temp_name();
+
+                    auto temp_value = std::make_unique<TemporaryIRValue>();
+                    temp_value -> temp_name = mulval -> result_name;
+
+                    current_block -> ADD_Value(std::move(mulval));
+
+                    return std::move(temp_value);
+                }
+                else if(ast -> op == "/"){
+                    auto divval = std::make_unique<BinaryIRValue>();
+                    divval -> operation = BinaryIRValue::DIV;
+                    divval -> left = visitMulExp(mulexp , current_block);
+                    divval -> right = visitUnaryExp(unrayexp , current_block);
+                    divval -> result_name = generate_temp_name();
+
+                    auto temp_value = std::make_unique<TemporaryIRValue>();
+                    temp_value -> temp_name = divval -> result_name;
+
+                    current_block -> ADD_Value(std::move(divval));
+
+                    return std::move(temp_value);       
+                }
+                else if(ast -> op == "%"){
+                    auto modval = std::make_unique<BinaryIRValue>();
+                    modval -> operation = BinaryIRValue::MOD;
+                    modval -> left = visitMulExp(mulexp , current_block);
+                    modval -> right = visitUnaryExp(unrayexp , current_block);
+                    modval -> result_name = generate_temp_name();
+
+                    auto temp_value = std::make_unique<TemporaryIRValue>();
+                    temp_value -> temp_name = modval -> result_name;
+
+                    current_block -> ADD_Value(std::move(modval));
+
+                    return std::move(temp_value);      
+                }
+            } 
+        }
+    }
+    return nullptr;
+
+}
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitAddExp(const AddExpAST* ast, IRBasicBlock* current_block){
+    if(!ast) return nullptr;
+    if(ast ->type == AddExpAST::MULONLY){
+        if(auto mulexp = dynamic_cast<MulExpAST*>(ast->mulexp.get())){
+            return visitMulExp(mulexp , current_block);
+        }
+    }
+    else if (ast -> type == AddExpAST::ADDOPMUL){
+        if(auto addexp = dynamic_cast<AddExpAST*>(ast ->addexp.get())){
+            if(auto mulexp = dynamic_cast<MulExpAST*>(ast -> mulexp.get())){
+                if(ast ->op == "+"){
+                    auto addval = std::make_unique<BinaryIRValue>();
+                    
+                    addval ->operation = BinaryIRValue::ADD;
+                    addval ->left = visitAddExp(addexp , current_block);
+                    addval ->right = visitMulExp(mulexp , current_block);
+                    addval ->result_name = generate_temp_name();
+
+                    auto temp_value = std::make_unique<TemporaryIRValue>();
+                    temp_value -> temp_name = addval -> result_name;
+
+                    current_block ->ADD_Value(std::move(addval));
+
+                    return std::move(temp_value);
+
+                }
+                else if(ast ->op == "-"){
+                    auto subval = std::make_unique<BinaryIRValue>();
+                    
+                    subval ->operation = BinaryIRValue::SUB;
+                    subval ->left = visitAddExp(addexp , current_block);
+                    subval ->right = visitMulExp(mulexp , current_block);
+                    subval ->result_name = generate_temp_name();
+
+                    auto temp_value = std::make_unique<TemporaryIRValue>();
+                    temp_value -> temp_name = subval -> result_name;
+
+                    current_block ->ADD_Value(std::move(subval));
+
+                    return std::move(temp_value);
+
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block){
     if(!ast) return nullptr;
@@ -135,6 +258,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast, 
     }
     return nullptr;
 }
+
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block){
     if(!ast) return nullptr;

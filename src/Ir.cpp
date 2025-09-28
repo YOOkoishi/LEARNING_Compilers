@@ -32,8 +32,13 @@ void BinaryIRValue::Dump() const{
     switch (operation)
     {
     case ADD:
-        
-        break;
+        std::cout<<"  "<<result_name << " = " << "add " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;  
+             
     case SUB:
         std::cout<<"  "<<result_name << " = " << "sub " ; 
         left->Dump();
@@ -41,6 +46,7 @@ void BinaryIRValue::Dump() const{
         right->Dump(); 
         std::cout<< std::endl;
         break;
+    
     case EQ:
         std::cout<<"  "<<result_name << " = " << "eq " ; 
         left->Dump();
@@ -48,6 +54,32 @@ void BinaryIRValue::Dump() const{
         right->Dump(); 
         std::cout<< std::endl;
         break;
+    
+    case MUL:
+        std::cout<<"  "<<result_name << " = " << "mul " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+ 
+    case DIV:
+        std::cout<<"  "<<result_name << " = " << "div " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+
+    case MOD:
+        std::cout<<"  "<<result_name << " = " << "mod " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+    
+    
     default:
         break;
     }
@@ -92,9 +124,11 @@ void IRFunction::ADD_Block(std::unique_ptr<IRBasicBlock> block){
     ir_basicblock.push_back(std::move(block));
 }
 
+
 void IRBasicBlock::ADD_Value(std::unique_ptr<BaseIRValue> val){
     ir_value.push_back(std::move(val));
 }
+
 
 void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
     ir_function.push_back(std::move(func));
@@ -116,6 +150,7 @@ void IRProgram::To_RiscV() const{
     }
 }
 
+
 void IRFunction::To_RiscV() const{
     std::cout<<"  .global "<<function_name<<std::endl;
     std::cout<<function_name<<":\n";
@@ -124,12 +159,14 @@ void IRFunction::To_RiscV() const{
     }
 }
 
+
 void IRBasicBlock::To_RiscV() const{
     for(const auto &val : ir_value){
         val ->To_RiscV();
         std::cout<<std::endl;
     }
 }
+
 
 void ReturnIRValue::To_RiscV() const{
     if(auto int_val = dynamic_cast<IntegerIRValue*>(return_value.get())) {
@@ -146,15 +183,91 @@ void ReturnIRValue::To_RiscV() const{
     std::cout << "  ret";
 }
 
+
 void IntegerIRValue::To_RiscV() const{
         std::cout<<value;
 }
+
 
 void BinaryIRValue::To_RiscV() const{
     char reg_num = result_name[1];
     
     switch (operation) {
-    case ADD:
+       case ADD: {
+        auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
+        auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
+        
+        if(left_int) {
+            // 左操作数是立即数
+            if(left_int->value == 0) {
+                // 左操作数是 0
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 0 + 0
+                        std::cout << "  add t" << reg_num << ", x0, x0";
+                    } else {
+                        // 0 + 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  add t" << reg_num << ", x0, t" << temp_reg;
+                    }
+                } else {
+                    // 0 + 寄存器
+                    std::cout << "  add t" << reg_num << ", x0, ";
+                    right->To_RiscV();
+                }
+            } else {
+                // 左操作数是非零立即数
+                std::cout << "  li t" << reg_num << ", " << left_int->value << std::endl;
+                
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 非零立即数 + 0
+                        std::cout << "  add t" << reg_num << ", t" << reg_num << ", x0";
+                    } else {
+                        // 非零立即数 + 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  add t" << reg_num << ", t" << reg_num << ", t" << temp_reg;
+                    }
+                } else {
+                    // 非零立即数 + 寄存器
+                    std::cout << "  add t" << reg_num << ", t" << reg_num << ", ";
+                    right->To_RiscV();
+                }
+            }
+        } else {
+            // 左操作数是寄存器
+            if(right_int) {
+                // 右操作数是立即数
+                if(right_int->value == 0) {
+                    // 寄存器 + 0
+                    std::cout << "  add t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", x0";
+                } else {
+                    // 寄存器 + 非零立即数
+                    char temp_reg = (reg_num == '0') ? '9' : (char)(reg_num + 1);
+                    std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                    std::cout << "  add t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", t" << temp_reg;
+                }
+            } else {
+                // 寄存器 + 寄存器
+                std::cout << "  add t" << reg_num << ", ";
+                left->To_RiscV();
+                std::cout << ", ";
+                right->To_RiscV();
+            }
+        }
+        break;
+    }
+
+
+
     case SUB: {
         auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
         auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
@@ -220,6 +333,229 @@ void BinaryIRValue::To_RiscV() const{
             } else {
                 // 寄存器 - 寄存器
                 std::cout << "  sub t" << reg_num << ", ";
+                left->To_RiscV();
+                std::cout << ", ";
+                right->To_RiscV();
+            }
+        }
+        break;
+    }
+
+
+    case MUL: {
+        auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
+        auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
+        
+        if(left_int) {
+            // 左操作数是立即数
+            if(left_int->value == 0) {
+                // 左操作数是 0
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 0 * 0
+                        std::cout << "  mul t" << reg_num << ", x0, x0";
+                    } else {
+                        // 0 * 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  mul t" << reg_num << ", x0, t" << temp_reg;
+                    }
+                } else {
+                    // 0 * 寄存器
+                    std::cout << "  mul t" << reg_num << ", x0, ";
+                    right->To_RiscV();
+                }
+            } else {
+                // 左操作数是非零立即数
+                std::cout << "  li t" << reg_num << ", " << left_int->value << std::endl;
+                
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 非零立即数 * 0
+                        std::cout << "  mul t" << reg_num << ", t" << reg_num << ", x0";
+                    } else {
+                        // 非零立即数 * 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  mul t" << reg_num << ", t" << reg_num << ", t" << temp_reg;
+                    }
+                } else {
+                    // 非零立即数 * 寄存器
+                    std::cout << "  mul t" << reg_num << ", t" << reg_num << ", ";
+                    right->To_RiscV();
+                }
+            }
+        } else {
+            // 左操作数是寄存器
+            if(right_int) {
+                // 右操作数是立即数
+                if(right_int->value == 0) {
+                    // 寄存器 * 0
+                    std::cout << "  mul t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", x0";
+                } else {
+                    // 寄存器 * 非零立即数
+                    char temp_reg = (reg_num == '0') ? '9' : (char)(reg_num + 1);
+                    std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                    std::cout << "  mul t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", t" << temp_reg;
+                }
+            } else {
+                // 寄存器 * 寄存器
+                std::cout << "  mul t" << reg_num << ", ";
+                left->To_RiscV();
+                std::cout << ", ";
+                right->To_RiscV();
+            }
+        }
+        break;
+    }
+
+
+    case DIV: {
+        auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
+        auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
+        
+        if(left_int) {
+            // 左操作数是立即数
+            if(left_int->value == 0) {
+                // 左操作数是 0
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 0 * 0
+                        std::cout << "  div t" << reg_num << ", x0, x0";
+                    } else {
+                        // 0 * 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  div t" << reg_num << ", x0, t" << temp_reg;
+                    }
+                } else {
+                    // 0 * 寄存器
+                    std::cout << "  div t" << reg_num << ", x0, ";
+                    right->To_RiscV();
+                }
+            } else {
+                // 左操作数是非零立即数
+                std::cout << "  li t" << reg_num << ", " << left_int->value << std::endl;
+                
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 非零立即数 * 0
+                        std::cout << "  div t" << reg_num << ", t" << reg_num << ", x0";
+                    } else {
+                        // 非零立即数 * 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  div t" << reg_num << ", t" << reg_num << ", t" << temp_reg;
+                    }
+                } else {
+                    // 非零立即数 * 寄存器
+                    std::cout << "  div t" << reg_num << ", t" << reg_num << ", ";
+                    right->To_RiscV();
+                }
+            }
+        } else {
+            // 左操作数是寄存器
+            if(right_int) {
+                // 右操作数是立即数
+                if(right_int->value == 0) {
+                    // 寄存器 * 0
+                    std::cout << "  div t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", x0";
+                } else {
+                    // 寄存器 * 非零立即数
+                    char temp_reg = (reg_num == '0') ? '9' : (char)(reg_num + 1);
+                    std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                    std::cout << "  div t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", t" << temp_reg;
+                }
+            } else {
+                // 寄存器 * 寄存器
+                std::cout << "  div t" << reg_num << ", ";
+                left->To_RiscV();
+                std::cout << ", ";
+                right->To_RiscV();
+            }
+        }
+        break;
+    }
+
+
+
+    case MOD: {
+        auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
+        auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
+        
+        if(left_int) {
+            // 左操作数是立即数
+            if(left_int->value == 0) {
+                // 左操作数是 0
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 0 - 0
+                        std::cout << "  rem t" << reg_num << ", x0, x0";
+                    } else {
+                        // 0 - 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  rem t" << reg_num << ", x0, t" << temp_reg;
+                    }
+                } else {
+                    // 0 - 寄存器
+                    std::cout << "  rem t" << reg_num << ", x0, ";
+                    right->To_RiscV();
+                }
+            } else {
+                // 左操作数是非零立即数
+                std::cout << "  li t" << reg_num << ", " << left_int->value << std::endl;
+                
+                if(right_int) {
+                    // 右操作数也是立即数
+                    if(right_int->value == 0) {
+                        // 非零立即数 - 0
+                        std::cout << "  rem t" << reg_num << ", t" << reg_num << ", x0";
+                    } else {
+                        // 非零立即数 - 非零立即数
+                        char temp_reg = reg_num;
+                        std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                        std::cout << "  rem t" << reg_num << ", t" << reg_num << ", t" << temp_reg;
+                    }
+                } else {
+                    // 非零立即数 - 寄存器
+                    std::cout << "  rem t" << reg_num << ", t" << reg_num << ", ";
+                    right->To_RiscV();
+                }
+            }
+        } else {
+            // 左操作数是寄存器
+            if(right_int) {
+                // 右操作数是立即数
+                if(right_int->value == 0) {
+                    // 寄存器 - 0
+                    std::cout << "  rem t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", x0";
+                } else {
+                    // 寄存器 - 非零立即数
+                    char temp_reg = (reg_num == '0') ? '9' : (char)(reg_num + 1);
+                    std::cout << "  li t" << temp_reg << ", " << right_int->value << std::endl;
+                    std::cout << "  rem t" << reg_num << ", ";
+                    left->To_RiscV();
+                    std::cout << ", t" << temp_reg;
+                }
+            } else {
+                // 寄存器 - 寄存器
+                std::cout << "  rem t" << reg_num << ", ";
                 left->To_RiscV();
                 std::cout << ", ";
                 right->To_RiscV();

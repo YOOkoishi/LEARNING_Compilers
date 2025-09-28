@@ -24,6 +24,8 @@ public:
     void visitBlock(const BlockAST* ast, IRBasicBlock* current_block);
     void visitStmt(const StmtAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitAddExp(const AddExpAST* ast, IRBasicBlock* current_block);
+    std::unique_ptr<BaseIRValue> visitMulExp(const MulExpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitPrimaryExp(const PrimaryExpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitUnaryExp(const UnaryExpAST* ast, IRBasicBlock* current_block);
     std::unique_ptr<BaseIRValue> visitNumber(const NumberAST* ast, IRBasicBlock* current_block);

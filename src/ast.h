@@ -2,7 +2,7 @@
 
 #include "include.h"
 
-//  定义 AST 中的 各种类型
+//  根据 EBNF 定义 AST 中的 各种类型
 
 
 

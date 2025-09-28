@@ -118,12 +118,14 @@ AddExp
     addexp -> addexp = unique_ptr<BaseAST>($1);
     addexp -> mulexp = unique_ptr<BaseAST>($3);
     addexp -> op = "+";
+    $$ = addexp;
   }
   | AddExp '-' MulExp {
     auto addexp = new AddExpAST(AddExpAST::ADDOPMUL);
     addexp -> addexp = unique_ptr<BaseAST>($1);
     addexp -> mulexp = unique_ptr<BaseAST>($3);
     addexp -> op = "-";
+    $$ = addexp;
   }
   ;
 
@@ -132,24 +134,28 @@ MulExp
   : UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::UNARYEXP);
     mulexp -> unrayexp = unique_ptr<BaseAST>($1);
+    $$ = mulexp;
   }
   | MulExp '*' UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
     mulexp -> op = "*";
+    $$ = mulexp;
   } 
   | MulExp '/' UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
     mulexp -> op = "/";
+    $$ = mulexp;
   }
   | MulExp '%' UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
     mulexp -> op = "%";
+    $$ = mulexp;
   }
   ;
 
