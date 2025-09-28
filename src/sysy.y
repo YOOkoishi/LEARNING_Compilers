@@ -111,7 +111,7 @@ AddExp
   : MulExp {
     auto addexp = new AddExpAST(AddExpAST::MULONLY);
     addexp -> mulexp = unique_ptr<BaseAST>($1);
-    $$ = exp;
+    $$ = addexp;
   }
   | AddExp '+' MulExp {
     auto addexp = new AddExpAST(AddExpAST::ADDOPMUL);

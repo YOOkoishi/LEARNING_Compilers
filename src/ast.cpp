@@ -43,7 +43,7 @@ void NumberAST :: Dump() const{
 
 void ExpAST :: Dump() const{
     std::cout<<"ExpAST { ";
-    unaryexp ->Dump();
+    addexp ->Dump();
     std::cout<<" }";
 }
 
@@ -57,4 +57,12 @@ void UnaryExpAST :: Dump() const{
 
 void UnaryOpAST :: Dump() const{
 
+}
+
+void AddExpAST :: Dump() const{
+
+}
+
+void MulExpAST :: Dump() const{
+    
 }

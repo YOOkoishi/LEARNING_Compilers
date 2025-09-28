@@ -12,11 +12,13 @@ public:
     virtual void Dump() const = 0;
 };
 
+
 class CompUnitAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> fun_def;
     void Dump() const override;
 };
+
 
 class FunDefAST : public BaseAST {
 public:
@@ -26,17 +28,20 @@ public:
     void Dump() const override;
 };
 
+
 class FunTypeAST : public BaseAST {
 public:
     std::string tp;
     void Dump() const override;
 };
 
+
 class BlockAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> stmt;
     void Dump() const override;
 };
+
 
 class StmtAST : public BaseAST {
 public:
@@ -46,17 +51,20 @@ public:
     void Dump() const override;
 };
 
+
 class NumberAST : public BaseAST {
 public:
     int int_const;
     void Dump() const override;
 };
 
+
 class ExpAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> addexp;
     void Dump() const override;   
 };
+
 
 class PrimaryExpAST : public BaseAST{
 public:
@@ -69,6 +77,7 @@ public:
     void Dump() const override;
 };
 
+
 class UnaryExpAST : public BaseAST {
 public:
     enum Type {PRIMARYEXP , UNARYEXP} type;
@@ -80,11 +89,13 @@ public:
     void Dump() const override;
 };
 
+
 class UnaryOpAST : public BaseAST {
 public:
     char op;
     void Dump() const override;
 };
+
 
 class MulExpAST : public BaseAST {
 public:
@@ -94,7 +105,10 @@ public:
     std::unique_ptr<BaseAST> unrayexp;
     std::unique_ptr<BaseAST> mulexp;
     std::string op;
+
+    void Dump() const override;
 };
+
 
 class AddExpAST : public BaseAST {
 public:
@@ -104,4 +118,6 @@ public:
     std::unique_ptr<BaseAST> mulexp;
     std::unique_ptr<BaseAST> addexp;
     std::string op;
+
+    void Dump() const override;
 };
