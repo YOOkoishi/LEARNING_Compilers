@@ -16,9 +16,9 @@
 
 - [x] ast
 - [x] bison
-- [ ] IR Generator
-- [ ] Koopa IR output
-- [ ] To_RiscV
+- [x] IR Generator
+- [x] Koopa IR output
+- [x] To_RiscV
 
 对于 3.3
 
