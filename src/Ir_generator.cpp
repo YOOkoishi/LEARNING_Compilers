@@ -196,6 +196,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitAddExp(const AddExpAST* ast, IRBa
             }
         }
     }
+    return nullptr;
 }
 
 
