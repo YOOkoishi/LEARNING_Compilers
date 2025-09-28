@@ -54,7 +54,7 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> unaryexp;
+    std::unique_ptr<BaseAST> addexp;
     void Dump() const override;   
 };
 
@@ -84,4 +84,24 @@ class UnaryOpAST : public BaseAST {
 public:
     char op;
     void Dump() const override;
+};
+
+class MulExpAST : public BaseAST {
+public:
+    enum Type {UNARYEXP , MULOPUNRAY} type;
+
+    MulExpAST(Type t) : type(t){};
+    std::unique_ptr<BaseAST> unrayexp;
+    std::unique_ptr<BaseAST> mulexp;
+    std::string op;
+};
+
+class AddExpAST : public BaseAST {
+public:
+    enum Type {MULONLY , ADDOPMUL} type;
+
+    AddExpAST(Type t) : type(t){};
+    std::unique_ptr<BaseAST> mulexp;
+    std::unique_ptr<BaseAST> addexp;
+    std::string op;
 };
