@@ -101,7 +101,7 @@ Stmt
 Exp 
   : AddExp {
     auto exp = new ExpAST();
-    exp -> addexp = unique_ptr<BaseAST>($1);
+    exp -> lorexp = unique_ptr<BaseAST>($1);
     $$ = exp;
   }
   ;

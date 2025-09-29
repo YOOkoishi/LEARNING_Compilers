@@ -43,7 +43,7 @@ void NumberAST :: Dump() const{
 
 void ExpAST :: Dump() const{
     std::cout<<"ExpAST { ";
-    addexp ->Dump();
+    lorexp ->Dump();
     std::cout<<" }";
 }
 
@@ -64,5 +64,21 @@ void AddExpAST :: Dump() const{
 }
 
 void MulExpAST :: Dump() const{
+    
+}
+
+void LOrExpAST :: Dump() const{
+    
+}
+
+void EqExpAST :: Dump() const{
+    
+}
+
+void RelExpAST :: Dump() const{
+    
+}
+
+void LAndExpAST:: Dump() const{
     
 }

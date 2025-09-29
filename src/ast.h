@@ -61,7 +61,7 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> addexp;
+    std::unique_ptr<BaseAST> lorexp;
     void Dump() const override;   
 };
 
@@ -121,3 +121,58 @@ public:
 
     void Dump() const override;
 };
+
+
+class LOrExpAST : public BaseAST {
+public:
+    enum Type {LANDEXP , LORLAND} type;
+
+    LOrExpAST(Type t) : type(t){};
+
+    std::unique_ptr<BaseAST> landexp;
+    std::unique_ptr<BaseAST> lorexp;
+
+    void Dump() const override;
+};
+
+
+class LAndExpAST : public BaseAST {
+public:
+    enum Type {EQEXP, LANDEQ} type;
+
+    LAndExpAST(Type t) : type(t){};
+
+    std::unique_ptr<BaseAST> eqexp;
+    std::unique_ptr<BaseAST> landexp;
+
+    void Dump() const override;
+};
+
+
+class EqExpAST : public BaseAST {
+public:
+    enum Type {RELEXP, EQREL} type;
+
+    EqExpAST(Type t) : type(t){};
+
+    std::unique_ptr<BaseAST> relexp;
+    std::unique_ptr<BaseAST> eqexp;
+    std::string op;
+    void Dump() const override;
+    
+};
+
+
+class RelExpAST : public BaseAST {
+public:
+    enum Type {ADDEXP, RELADD} type;
+
+    RelExpAST(Type t) : type(t){};
+
+    std::unique_ptr<BaseAST> relexp;
+    std::unique_ptr<BaseAST> addexp;
+    std::string op;
+    void Dump() const override;
+    
+};
+
