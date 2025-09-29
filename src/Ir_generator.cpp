@@ -83,9 +83,9 @@ void IRGenerator::visitStmt(const StmtAST* ast , IRBasicBlock* current_block){
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast , IRBasicBlock* current_block){
     if(!ast)return nullptr;
-    if(ast ->addexp){
-        if(auto addexp = dynamic_cast<AddExpAST*>(ast ->addexp.get())){
-           return visitAddExp(addexp,current_block);
+    if(ast ->lorexp){
+        if(auto lorexp = dynamic_cast<LOrExpAST*>(ast ->lorexp.get())){
+           return visitLorExp(lorexp,current_block);
         }
     }
     return nullptr;
