@@ -187,7 +187,47 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitEqExp(const EqExpAST* ast, IRBasi
 
 
 
+std::unique_ptr<BaseIRValue> IRGenerator::visitRelExp(const RelExpAST* ast, IRBasicBlock* current_block){
+    if(!ast) return nullptr;
+    if(ast -> type == RelExpAST::ADDEXP){
+        if(auto add = dynamic_cast<AddExpAST*>(ast ->addexp.get())){
+            return visitAddExp(add ,current_block);
+        }
+    }
+    else if(ast -> type == RelExpAST::RELADD){
+        if(auto rel = dynamic_cast<RelExpAST*>(ast ->relexp.get())){
+            if(auto add = dynamic_cast<AddExpAST*>(ast -> addexp.get())){
+                auto relval = std::make_unique<BinaryIRValue>();
 
+                relval -> left = visitRelExp(rel , current_block);
+                relval -> right = visitAddExp(add , current_block);
+                if(ast -> op == ">"){
+                    relval ->operation = BinaryIRValue::GT;
+                }
+                else if(ast -> op == "<"){
+                    relval ->operation = BinaryIRValue::LT;
+                }
+                else if(ast -> op == "<="){
+                    relval ->operation = BinaryIRValue::LE;
+                }
+                else if(ast -> op == ">="){
+                    relval ->operation = BinaryIRValue::GE;
+                }
+
+
+                relval -> result_name = generate_temp_name();
+
+                auto temp_name = std::make_unique<TemporaryIRValue>();
+                temp_name -> temp_name = relval -> result_name;
+
+                current_block->ADD_Value(std::move(relval));
+
+                return std::move(temp_name);
+
+            }
+        }
+    }
+}
 
 
 

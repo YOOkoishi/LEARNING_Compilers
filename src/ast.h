@@ -149,11 +149,11 @@ public:
 };
 
 
-class RelExpAST : public BaseAST {
+class EqExpAST : public BaseAST {
 public:
     enum Type {RELEXP, EQREL} type;
 
-    RelExpAST(Type t) : type(t){};
+    EqExpAST(Type t) : type(t){};
 
     std::unique_ptr<BaseAST> relexp;
     std::unique_ptr<BaseAST> eqexp;

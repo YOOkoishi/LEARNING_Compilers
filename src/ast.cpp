@@ -71,7 +71,7 @@ void LOrExpAST :: Dump() const{
     
 }
 
-void RelExpAST :: Dump() const{
+void EqExpAST :: Dump() const{
     
 }
 
