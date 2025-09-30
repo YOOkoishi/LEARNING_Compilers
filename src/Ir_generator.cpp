@@ -104,8 +104,33 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast, IRBa
             if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
                 auto orval = std::make_unique<BinaryIRValue>();
 
-                orval -> left = visitLOrExp(lor , current_block);
-                orval -> right = visitLAndExp(land , current_block);
+                auto ltp = std::make_unique<BinaryIRValue>();
+                ltp -> left = visitLOrExp(lor , current_block);
+                ltp -> right = std::make_unique<IntegerIRValue>(0);
+                ltp -> operation = BinaryIRValue::NE;
+                ltp -> result_name = generate_temp_name();
+
+                auto tp_left = std::make_unique<TemporaryIRValue>();
+                tp_left -> temp_name = ltp ->result_name;
+
+                current_block ->ADD_Value(std::move(ltp));
+
+
+                auto rtp = std::make_unique<BinaryIRValue>();
+                rtp -> left = visitLAndExp(land , current_block);
+                rtp -> right = std::make_unique<IntegerIRValue>(0);
+                rtp -> operation = BinaryIRValue::NE;
+                rtp -> result_name = generate_temp_name();
+
+                auto tp_right = std::make_unique<TemporaryIRValue>();
+                tp_right -> temp_name = rtp ->result_name;
+
+                current_block ->ADD_Value(std::move(rtp));
+
+
+
+                orval -> left = std::move(tp_left);
+                orval -> right = std::move(tp_right);
                 orval -> operation = BinaryIRValue::OR;
                 orval -> result_name = generate_temp_name();
 
@@ -134,8 +159,34 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast, IR
             if(auto eq = dynamic_cast<EqExpAST*>(ast -> eqexp.get())){
                 auto andval = std::make_unique<BinaryIRValue>();
 
-                andval -> right = visitLAndExp(land , current_block);
-                andval -> left = visitEqExp(eq , current_block);
+                auto ltp = std::make_unique<BinaryIRValue>();
+                ltp -> left = visitLAndExp(land , current_block);
+                ltp -> right = std::make_unique<IntegerIRValue>(0);
+                ltp -> operation = BinaryIRValue::NE;
+                ltp -> result_name = generate_temp_name();
+
+                auto tp_left = std::make_unique<TemporaryIRValue>();
+                tp_left -> temp_name = ltp ->result_name;
+
+                current_block ->ADD_Value(std::move(ltp));
+
+
+                auto rtp = std::make_unique<BinaryIRValue>();
+                rtp -> left = visitEqExp(eq , current_block);
+                rtp -> right = std::make_unique<IntegerIRValue>(0);
+                rtp -> operation = BinaryIRValue::NE;
+                rtp -> result_name = generate_temp_name();
+
+                auto tp_right = std::make_unique<TemporaryIRValue>();
+                tp_right -> temp_name = rtp ->result_name;
+
+                current_block ->ADD_Value(std::move(rtp));
+
+
+
+
+                andval -> right = std::move(tp_left);
+                andval -> left = std::move(tp_right);
                 andval -> operation = BinaryIRValue::AND;
                 andval -> result_name = generate_temp_name();
 
@@ -183,6 +234,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitEqExp(const EqExpAST* ast, IRBasi
             }
         }
     }
+    return nullptr;
 }
 
 
@@ -227,6 +279,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitRelExp(const RelExpAST* ast, IRBa
             }
         }
     }
+    return nullptr;
 }
 
 

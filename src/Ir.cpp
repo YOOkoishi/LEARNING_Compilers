@@ -79,7 +79,63 @@ void BinaryIRValue::Dump() const{
         std::cout<< std::endl;
         break;
     
+    case NE:
+        std::cout<<"  "<<result_name << " = " << "ne " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
     
+    case LT:
+        std::cout<<"  "<<result_name << " = " << "lt " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+    
+    case GT:
+        std::cout<<"  "<<result_name << " = " << "gt " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+           
+    case GE:
+        std::cout<<"  "<<result_name << " = " << "ge " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+           
+    case LE:
+        std::cout<<"  "<<result_name << " = " << "le " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+           
+    case AND:
+        std::cout<<"  "<<result_name << " = " << "and " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+           
+    case OR:
+        std::cout<<"  "<<result_name << " = " << "or " ; 
+        left->Dump();
+        std::cout<<", ";
+        right->Dump(); 
+        std::cout<< std::endl;
+        break;
+                
+
     default:
         break;
     }

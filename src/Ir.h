@@ -38,6 +38,8 @@ public:
 class IntegerIRValue : public BaseIRValue{
 public:
     int value;
+    IntegerIRValue(int v) : value(v){};
+    IntegerIRValue(){};
     void Dump() const override;
     void To_RiscV() const override;
 };
