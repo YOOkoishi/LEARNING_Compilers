@@ -184,7 +184,6 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast, IR
 
 
 
-
                 andval -> right = std::move(tp_left);
                 andval -> left = std::move(tp_right);
                 andval -> operation = BinaryIRValue::AND;
