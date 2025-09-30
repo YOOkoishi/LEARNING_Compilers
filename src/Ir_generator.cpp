@@ -85,11 +85,112 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast , IRBasicBl
     if(!ast)return nullptr;
     if(ast ->lorexp){
         if(auto lorexp = dynamic_cast<LOrExpAST*>(ast ->lorexp.get())){
-           return visitLorExp(lorexp,current_block);
+           return visitLOrExp(lorexp,current_block);
         }
     }
     return nullptr;
 }
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast, IRBasicBlock* current_block){
+    if(!ast)return nullptr;
+    if(ast ->type == LOrExpAST::LANDEXP){
+        if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
+            return visitLAndExp(land , current_block);
+        }
+    }
+    else if(ast -> type == LOrExpAST::LORLAND){
+        if(auto lor = dynamic_cast<LOrExpAST*>(ast -> lorexp.get())){
+            if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
+                auto orval = std::make_unique<BinaryIRValue>();
+
+                orval -> left = visitLOrExp(lor , current_block);
+                orval -> right = visitLAndExp(land , current_block);
+                orval -> operation = BinaryIRValue::OR;
+                orval -> result_name = generate_temp_name();
+
+                auto temp_name = std::make_unique<TemporaryIRValue>();
+                temp_name ->temp_name = orval -> result_name;
+
+                current_block ->ADD_Value(std::move(orval));
+
+                return std::move(temp_name);
+            }
+        }
+    }
+    return nullptr;
+}
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast, IRBasicBlock* current_block){
+    if(!ast)return nullptr;
+    if(ast ->type == LAndExpAST::EQEXP){
+        if(auto eq = dynamic_cast<EqExpAST*>(ast -> eqexp.get())){
+            return visitEqExp(eq , current_block);
+        }
+    }
+    else if(ast -> type == LAndExpAST::LANDEQ){
+        if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
+            if(auto eq = dynamic_cast<EqExpAST*>(ast -> eqexp.get())){
+                auto andval = std::make_unique<BinaryIRValue>();
+
+                andval -> right = visitLAndExp(land , current_block);
+                andval -> left = visitEqExp(eq , current_block);
+                andval -> operation = BinaryIRValue::AND;
+                andval -> result_name = generate_temp_name();
+
+                auto temp_name = std::make_unique<TemporaryIRValue>();
+                temp_name ->temp_name = andval -> result_name;
+
+                current_block ->ADD_Value(std::move(andval));
+
+                return std::move(temp_name);
+            }
+        }
+    }
+    return nullptr;
+}
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitEqExp(const EqExpAST* ast, IRBasicBlock* current_block){
+    if(!ast) return nullptr;
+    if(ast -> type == EqExpAST::RELEXP){
+        if(auto rel = dynamic_cast<RelExpAST*>(ast ->relexp.get())){
+            return visitRelExp(rel ,current_block);
+        }
+    }
+    else if(ast -> type == EqExpAST::EQREL){
+        if(auto eq = dynamic_cast<EqExpAST*>(ast ->eqexp.get())){
+            if(auto rel = dynamic_cast<RelExpAST*>(ast -> relexp.get())){
+                auto eqval = std::make_unique<BinaryIRValue>();
+
+                eqval -> left = visitEqExp(eq , current_block);
+                eqval -> right = visitRelExp(rel , current_block);
+                if(ast -> op == "=="){
+                    eqval ->operation = BinaryIRValue::EQ;
+                }
+                else if(ast -> op == "!="){
+                    eqval ->operation = BinaryIRValue::NE;
+                }
+                eqval -> result_name = generate_temp_name();
+
+                auto temp_name = std::make_unique<TemporaryIRValue>();
+                temp_name -> temp_name = eqval -> result_name;
+
+                current_block->ADD_Value(std::move(eqval));
+
+                return std::move(temp_name);
+
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
 
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast , IRBasicBlock* current_block){

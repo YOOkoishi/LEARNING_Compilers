@@ -38,12 +38,22 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN
+%token INT RETURN 
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
+%token LE GE EQ NE LT GT 
+%token LOR LAND
+
+%left LOR
+%left LAND
+%left EQ NE
+%left LT LE GT GE
+%left '+' '-'
+%left '*' '/' '%'
+
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp AddExp MulExp 
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp AddExp MulExp LOrExp EqExp RelExp LAndExp  
 /* %type <int_val>  */
 %type <str_val> UnaryOp
 
@@ -99,12 +109,102 @@ Stmt
 
 
 Exp 
-  : AddExp {
+  : LOrExp {
     auto exp = new ExpAST();
     exp -> lorexp = unique_ptr<BaseAST>($1);
     $$ = exp;
   }
   ;
+
+
+LOrExp
+  : LAndExp {
+    auto lor = new LOrExpAST(LOrExpAST::LANDEXP);
+    lor -> landexp = unique_ptr<BaseAST>($1);
+    $$ = lor;
+  }
+  | LOrExp LOR LAndExp {
+    auto lor = new LOrExpAST(LOrExpAST::LORLAND);
+    lor -> lorexp = unique_ptr<BaseAST>($1);
+    lor -> landexp = unique_ptr<BaseAST>($3);
+    $$ = lor;
+  }
+  ;
+
+
+LAndExp
+  : EqExp {
+    auto land = new LAndExpAST(LAndExpAST::EQEXP);
+    land -> eqexp = unique_ptr<BaseAST>($1);
+    $$ = land;
+  }
+  | LAndExp LAND EqExp {
+    auto land = new LAndExpAST(LAndExpAST::LANDEQ);
+    land -> landexp = unique_ptr<BaseAST>($1);
+    land -> eqexp = unique_ptr<BaseAST>($3);
+    $$ = land;
+  }
+  ;
+
+EqExp
+  : RelExp {
+    auto eq = new EqExpAST(EqExpAST::RELEXP);
+    eq -> relexp = unique_ptr<BaseAST>($1);
+    $$ = eq;
+  }
+  | EqExp EQ RelExp{
+    auto eq = new EqExpAST(EqExpAST::EQREL);
+    eq -> eqexp = unique_ptr<BaseAST>($1);
+    eq -> op = "==";
+    eq -> relexp = unique_ptr<BaseAST>($3);
+    $$ = eq;
+  }
+  | EqExp NE RelExp{
+    auto eq = new EqExpAST(EqExpAST::EQREL);
+    eq -> eqexp = unique_ptr<BaseAST>($1);
+    eq -> op = "!=";
+    eq -> relexp = unique_ptr<BaseAST>($3);
+    $$ = eq;
+  }
+  ;
+
+
+RelExp
+  : AddExp {
+    auto rel = new RelExpAST(RelExpAST::ADDEXP);
+    rel -> addexp = unique_ptr<BaseAST>($1);
+    $$ = rel;
+  }
+  | RelExp LT AddExp {
+    auto rel = new RelExpAST(RelExpAST::RELADD);
+    rel -> relexp = unique_ptr<BaseAST>($1);
+    rel -> op = "<";
+    rel -> addexp = unique_ptr<BaseAST>($3);
+    $$ = rel;
+  }
+  | RelExp GT AddExp {
+    auto rel = new RelExpAST(RelExpAST::RELADD);
+    rel -> relexp = unique_ptr<BaseAST>($1);
+    rel -> op = ">";
+    rel -> addexp = unique_ptr<BaseAST>($3);
+    $$ = rel;
+  }
+  | RelExp LE AddExp {
+    auto rel = new RelExpAST(RelExpAST::RELADD);
+    rel -> relexp = unique_ptr<BaseAST>($1);
+    rel -> op = "<=";
+    rel -> addexp = unique_ptr<BaseAST>($3);
+    $$ = rel;
+  }
+  | RelExp GE AddExp {
+    auto rel = new RelExpAST(RelExpAST::RELADD);
+    rel -> relexp = unique_ptr<BaseAST>($1);
+    rel -> op = ">=";
+    rel -> addexp = unique_ptr<BaseAST>($3);
+    $$ = rel;
+  }
+  ;
+  
 
 
 AddExp
@@ -158,6 +258,7 @@ MulExp
     $$ = mulexp;
   }
   ;
+
 
 PrimaryExp
   : '(' Exp ')'{
