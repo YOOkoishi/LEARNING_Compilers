@@ -70,6 +70,18 @@ public:
 
     void Dump() const override;
     void To_RiscV() const override;
+
+private:
+    // 辅助方法：生成不同类型的二元运算指令
+    void emitBinaryOp(const std::string& op_name, char reg_num,
+                      IntegerIRValue* left_int, IntegerIRValue* right_int) const;
+    void emitTwoImmediates(const std::string& op_name, char reg_num,
+                           int left_val, int right_val) const;
+    void emitLeftImmediate(const std::string& op_name, char reg_num, int left_val) const;
+    void emitRightImmediate(const std::string& op_name, char reg_num, int right_val) const;
+    void emitTwoRegisters(const std::string& op_name, char reg_num) const;
+    void emitComparisonOp(Operation op, char reg_num,
+                          IntegerIRValue* left_int, IntegerIRValue* right_int) const;
 };
 
 class TemporaryIRValue : public BaseIRValue{
