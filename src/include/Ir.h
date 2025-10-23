@@ -28,12 +28,16 @@ public:
     virtual void To_RiscV() const = 0;
 };
 
+
+
 class ReturnIRValue : public BaseIRValue{
 public:
     std::unique_ptr<BaseIRValue> return_value;  
     void Dump() const override;
     void To_RiscV() const override;
 };
+
+
 
 class IntegerIRValue : public BaseIRValue{
 public:
@@ -43,6 +47,8 @@ public:
     void Dump() const override;
     void To_RiscV() const override;
 };
+
+
 
 class BinaryIRValue : public BaseIRValue{
 public:
@@ -71,6 +77,7 @@ public:
     void Dump() const override;
     void To_RiscV() const override;
 
+
 private:
     // 辅助方法：生成不同类型的二元运算指令
     void emitBinaryOp(const std::string& op_name, char reg_num,
@@ -84,12 +91,15 @@ private:
                           IntegerIRValue* left_int, IntegerIRValue* right_int) const;
 };
 
+
+
 class TemporaryIRValue : public BaseIRValue{
 public :
     std::string temp_name;
     void Dump() const override;
     void To_RiscV() const override;
 };
+
 
 
 class IRBasicBlock {
@@ -102,6 +112,8 @@ public:
 
 };
 
+
+
 class IRFunction {
 public:
     std::string function_name;
@@ -111,6 +123,8 @@ public:
     void DumpBlock() const;
     void To_RiscV() const;
 };
+
+
 
 class IRProgram {
 public:

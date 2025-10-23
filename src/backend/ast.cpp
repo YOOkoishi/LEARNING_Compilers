@@ -24,9 +24,7 @@ void FunTypeAST :: Dump() const{
 
 
 void BlockAST :: Dump() const{
-    std::cout << "BlockAST { ";
-    stmt -> Dump() ;
-    std::cout << " } ";    
+ 
 }
 
 void StmtAST :: Dump() const{

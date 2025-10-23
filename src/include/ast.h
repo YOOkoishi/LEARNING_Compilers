@@ -40,8 +40,14 @@ public:
 
 class BlockAST : public BaseAST {
 public:
-    std::vector<std::unique_ptr<BaseAST>> blockitem; 
+    std::unique_ptr<BaseAST> blockitems; 
     void Dump() const override;
+};
+
+
+class BlockItemsAST : public BaseAST{
+public:
+    std::vector<std::unique_ptr<BaseAST>> item;
 };
 
 
@@ -235,13 +241,13 @@ public:
 };
 
 
-class ConstInitVal : public BaseAST {
+class ConstInitValAST : public BaseAST {
 public:
     std::string constexp;
 };
 
 
-class ConstExp : public BaseAST {
+class ConstExpAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> exp;
 };
