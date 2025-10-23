@@ -36,11 +36,31 @@ public:
 };
 
 
+//new
+
 class BlockAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> stmt;
+    std::vector<std::unique_ptr<BaseAST>> blockitem; 
     void Dump() const override;
 };
+
+
+class BlockItemAST : public BaseAST {
+public:
+    enum Type {
+        DECL,
+        STMT
+    } type;
+    
+    BlockItemAST(Type t) : type(t){};
+    BlockItemAST(){};
+
+    std::unique_ptr<BaseAST> decl;
+    std::unique_ptr<BaseAST> stmt;
+};
+
+
+//4.1
 
 
 class StmtAST : public BaseAST {
@@ -68,9 +88,10 @@ public:
 
 class PrimaryExpAST : public BaseAST{
 public:
-    enum Type { EXP, NUMBER } type;
+    enum Type { EXP, NUMBER , LVAL} type;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> number;
+    std::unique_ptr<BaseAST> lval;
 
     PrimaryExpAST(Type t) : type(t){};
 
@@ -212,3 +233,24 @@ public:
     std::unique_ptr<BaseAST> constinitval;
     
 };
+
+
+class ConstInitVal : public BaseAST {
+public:
+    std::string constexp;
+};
+
+
+class ConstExp : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> exp;
+};
+
+
+class LValAST : public BaseAST {
+public:
+    std::string ident;
+};
+
+
+
