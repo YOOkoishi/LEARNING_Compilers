@@ -1,7 +1,7 @@
-#include "include.h"
-#include "ast.h"
-#include "Ir.h"
-#include "Ir_generator.h"
+#include "../include/include.h"
+#include "../include/ast.h"
+#include "../include/Ir.h"
+#include "../include/Ir_generator.h"
 
 int IRGenerator::blockcount = 0;
 

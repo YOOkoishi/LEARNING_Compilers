@@ -176,3 +176,39 @@ public:
     
 };
 
+
+
+/*
+
+下面是常量与变量相关AST
+
+*/
+
+
+
+
+class DeclAST : public BaseAST {
+public:
+
+    std::unique_ptr<BaseAST> constdecl;
+
+};
+
+
+class ConstDeclAST : public BaseAST {
+public:
+
+    std::string btype = "int";
+    std::vector<std::unique_ptr<BaseAST>> constdef ;
+
+};
+
+
+
+class ConstDefAST : public BaseAST {
+public:
+
+    std::string ident;
+    std::unique_ptr<BaseAST> constinitval;
+    
+};

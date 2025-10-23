@@ -1,6 +1,6 @@
 
-#include "include.h"
-#include "ast.h"
+#include "../include/include.h"
+#include "../include/ast.h"
 
 void CompUnitAST :: Dump() const {
     std::cout << "CompUnitAST { ";

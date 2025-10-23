@@ -1,5 +1,5 @@
-#include "include.h"
-#include "Ir.h"
+#include "../include/include.h"
+#include "../include/Ir.h"
 
 
 // 各类型IR Dump() 函数的定义

@@ -3,9 +3,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "ast.h"
-#include "Ir.h"
-#include "Ir_generator.h"
+#include "../include/ast.h"
+#include "../include/Ir.h"
+#include "../include/Ir_generator.h"
 
 using namespace std;
 
