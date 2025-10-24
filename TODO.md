@@ -31,7 +31,8 @@
 对于 4.1
 
 - [x] ast
-- [ ] bison
+- [x] bison
+- [ ] 符号表
 - [ ] IR Generator
 - [ ] Koopa IR output
 - [ ] To_RiscV

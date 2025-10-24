@@ -54,8 +54,8 @@ using namespace std;
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt Number 
-%type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp
-%type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval
+%type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp ConstExp
+%type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval ConstDefs BType
 /* %type <int_val>  */
 %type <str_val> UnaryOp
 
@@ -95,20 +95,125 @@ FuncType
 Block
   : '{' BlockItems '}' {
     auto block = new BlockAST();
-    block -> block = unique_ptr<BaseAST>($2);
+    block -> blockitems = unique_ptr<BaseAST>($2);
     $$ = block;
   }
   ;
 
 
+
+
 BlockItems
   : BlockItem {
-    
+    auto blockitems = new BlockItemsAST();
+    blockitems -> item.push_back(unique_pte<BaseAST>($1));
+    $$ = blockitems;    
+
   }
   | BlockItems BlockItem {
+    auto blockitems = dynamic_cast<BLockItemsAST*>($1);
+    blockitems -> item.push_back(unique_pte<BaseAST>($2));
+    $$ = blockitems;
+  }
+  ;
+
+
+
+
+BlockItem 
+  : Decl {
+    auto blockitem = new BlockItemAST();
+    blockitem -> decl = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+
+  }
+  | Stmt {
+    auto blockitem = new BlockItemAST();
+    blockitem -> stmt = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+  }
+  ;
+
+
+
+
+Decl
+  : ConstDecl {
+    auto decl = new DeclAST();
+    decl -> constdecl = unique_ptr<BaseAST>($1);
+    $$ = decl;
+  }
+  ;
+
+
+ConstDecl 
+  : CONST BType ConstDefs ';' {
+    auto constdecl = new ConstDeclAST();
+    constdecl -> btype = unique_ptr<BaseAST>($2);
+    constdecl -> constdefs = unique_ptr<BaseAST>($3);
+    $$ = constdecl;
+  }
+  ;
+
+
+BType
+  : INT {
+    auto btype = new BTypeAST();
+    btype -> val = "int";
 
   }
   ;
+
+
+
+ConstDefs 
+  : ConstDef {
+    auto constdefs = new ConstDefsAST();
+    constdefs -> constdef.push_back(unique_ptr<BaseAST>($1));
+    $$ = constdefs;
+
+  }
+  | ConstDefs ',' ConstDef {
+    auto constdefs = dynamic_cast<ConstDefAST*>($1);
+    constdefs -> constdef.push_back(unique_ptr<BaseAST>($3));
+    $$ = constdefs;
+
+  }
+  ;
+
+
+
+
+ConstDef
+  : IDENT EQ ConstInitVal {
+  auto constdef = new ConstDefAST();
+  constdef -> ident = *unique_ptr<string>($1);
+  constdef -> constinitval = unique_ptr<BaseAST>($3);
+  $$ = constdef;    
+
+  }
+
+
+
+
+ConstInitVal
+  : ConstExp {
+    auto constinitval = new ConstInitValAST();
+    constinitval -> constexp = unique_ptr<BaseAST>($1);
+    $$ = constinitval ;
+  }
+
+
+
+
+ConstExp
+  : Exp {
+    auto constexp = new ConstExpAST();
+    constexp -> exp = unique_ptr(BaseAST)($1);
+    $$ = constexp;
+  }
+  ;
+
 
 
 
@@ -121,6 +226,8 @@ Stmt
   ;
 
 
+
+
 Exp 
   : LOrExp {
     auto exp = new ExpAST();
@@ -128,6 +235,8 @@ Exp
     $$ = exp;
   }
   ;
+
+
 
 
 LOrExp
@@ -145,6 +254,8 @@ LOrExp
   ;
 
 
+
+
 LAndExp
   : EqExp {
     auto land = new LAndExpAST(LAndExpAST::EQEXP);
@@ -158,6 +269,9 @@ LAndExp
     $$ = land;
   }
   ;
+
+
+
 
 EqExp
   : RelExp {
@@ -180,6 +294,8 @@ EqExp
     $$ = eq;
   }
   ;
+
+
 
 
 RelExp
@@ -220,6 +336,7 @@ RelExp
   
 
 
+
 AddExp
   : MulExp {
     auto addexp = new AddExpAST(AddExpAST::MULONLY);
@@ -241,6 +358,8 @@ AddExp
     $$ = addexp;
   }
   ;
+
+
 
 
 MulExp
@@ -273,6 +392,8 @@ MulExp
   ;
 
 
+
+
 PrimaryExp
   : '(' Exp ')'{
     auto primaryexp = new PrimaryExpAST(PrimaryExpAST::EXP);
@@ -284,7 +405,14 @@ PrimaryExp
     primaryexp -> number = unique_ptr<BaseAST>($1);
     $$ = primaryexp;
   }
+  | Lval {
+    auto primaryexp = new PrimaryExpAST(PrimaryExpAST::LVAL);
+    primaryexp -> lval = unique_ptr<BaseAST>($1);
+    $$ = primaryexp;
+  }
   ;
+
+
 
 
 UnaryExp
@@ -302,6 +430,8 @@ UnaryExp
   ;
 
 
+
+
 UnaryOp
   : '+'{
     $$ = new std::string("+");
@@ -314,6 +444,9 @@ UnaryOp
   }
   ;
 
+
+
+
 Number
   : INT_CONST {
     auto int_con = new NumberAST();
@@ -323,9 +456,14 @@ Number
   ;
 
 
+Lval
+  : IDENT {
+    auto lval = new LValAST();
+    lval -> ident = *unique_ptr<string>($1);
+    $$ = lval;
 
-
-
+  }
+  ;
 
 
 

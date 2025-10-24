@@ -59,9 +59,9 @@ void IRGenerator::visitFunType(const FunTypeAST* ast){
 
 void IRGenerator::visitBlock(const BlockAST* ast , IRBasicBlock* current_block){
     if(!ast) return;
-    if(ast -> stmt){
-        if(auto stmt = dynamic_cast<const StmtAST*>(ast ->stmt.get())){
-            visitStmt(stmt ,current_block);
+    if(ast -> blockitems){
+        if(auto blockitems = dynamic_cast<const BlockItemsAST*>(ast ->blockitems.get())){
+            visitBlockItems(blockitems ,current_block);
         }
     }
 }

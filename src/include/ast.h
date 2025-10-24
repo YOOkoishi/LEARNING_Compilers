@@ -224,12 +224,23 @@ public:
 
 class ConstDeclAST : public BaseAST {
 public:
+    std::unique_ptr<BaseAST> btype;
+    std::unique_ptr<BaseAST> constdefs;
+};
 
-    std::string btype = "int";
+
+
+class BType : public BaseAST {
+public:
+    std::string val ;
+};
+
+
+class ConstDefsAST : public BaseAST {
+    
     std::vector<std::unique_ptr<BaseAST>> constdef ;
 
 };
-
 
 
 class ConstDefAST : public BaseAST {
