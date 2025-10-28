@@ -79,6 +79,45 @@ void IRGenerator::visitBlock(const BlockAST* ast){
 }
 
 
+
+
+void IRGenerator::visitBlockItems(const BlockItemsAST* ast){
+    if(!ast) return;
+
+    for(const auto& item : ast->item){
+        if(auto blockitem = dynamic_cast<BlockItemAST*>(item.get())){
+            visitBlockItem(blockitem);
+        }
+    }
+}
+
+void IRGenerator::visitBlockItem(const BlockItemAST* ast){
+    if(!ast) return;
+
+    if(ast ->type == BlockItemAST::DECL){
+        if(auto decl = dynamic_cast<DeclAST*>(ast -> decl.get())){
+            visitDecl(decl);
+        }
+    }
+    else if(ast -> type == BlockItemAST::STMT){
+        if(auto stmt = dynamic_cast<StmtAST*>(ast -> stmt.get())){
+            visitStmt(stmt);
+        }
+    }
+}
+
+
+
+void IRGenerator::visitDecl(const DeclAST* ast){
+    if(!ast) return;
+
+    if(auto constdecl = dynamic_cast<ConstDeclAST*>(ast->constdecl.get())){
+        visitConstDecl(constdecl);
+    }
+
+}
+
+
 void IRGenerator::visitStmt(const StmtAST* ast){
     if(!ast)return;
     if(ast ->retrn == "return" && ast->exp){
@@ -90,6 +129,17 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         }
     }
 }
+
+
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitConstDecl(const ConstDeclAST* ast){
+    if(!ast) return;
+    
+}
+
+
+
 
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast){
