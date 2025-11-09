@@ -237,7 +237,7 @@ public:
 
 
 class ConstDefsAST : public BaseAST {
-    
+public: 
     std::vector<std::unique_ptr<BaseAST>> constdef ;
 
 };

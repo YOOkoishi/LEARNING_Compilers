@@ -133,13 +133,28 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
 
 
-std::unique_ptr<BaseIRValue> IRGenerator::visitConstDecl(const ConstDeclAST* ast){
+void IRGenerator::visitConstDecl(const ConstDeclAST* ast){
     if(!ast) return;
-    
+    if(auto constdefs = dynamic_cast<ConstDefsAST*>( ast->constdefs.get())){
+        visitConstDefs(constdefs);
+    }
 }
 
 
 
+void IRGenerator::visitConstDefs(const ConstDefsAST* ast){
+    if(!ast) return;
+    for(const auto& x : ast -> constdef){
+           if(auto constdef = dynamic_cast<ConstDefAST*>(x.get())){
+                visitConstDef(constdef);
+           }
+    }
+}
+
+void IRGenerator::visitConstDef(const ConstDefAST* ast){
+    if(!ast) return ;
+    ctx.symbol_table->symbol_table.back().insert(ast->ident,)
+}
 
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast){

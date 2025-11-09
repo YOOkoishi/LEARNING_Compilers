@@ -29,6 +29,29 @@ public:
 };
 
 
+class ConstIRValue : public BaseIRValue{
+public:
+    std::string name;
+    enum ConstType {
+        INT,
+        FLOAT
+    } const_type;
+
+    union {
+        int int_value;
+        float float_value;
+    } value;
+
+    ConstIRValue(int v) : const_type(INT), value{.int_value = v} {};
+    ConstIRValue(float v) : const_type(FLOAT) , value {.float_value = v} {};
+    ConstIRValue(){};
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
+
 
 class ReturnIRValue : public BaseIRValue{
 public:

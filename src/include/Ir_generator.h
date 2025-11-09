@@ -38,6 +38,10 @@ public:
     void visitBlockItems(const BlockItemsAST* ast);
     void visitBlockItem(const BlockItemAST* ast);
     void visitDecl(const DeclAST* ast);
+    void visitConstDecl(const ConstDeclAST* ast);
+    void visitConstDefs(const ConstDefsAST* ast);
+    void visitConstDef(const ConstDefAST* ast);
+    std::unique_ptr<BaseIRValue> visitConstInitVal(const ConstInitValAST* ast);
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast );
     std::unique_ptr<BaseIRValue> visitAddExp(const AddExpAST* ast );
     std::unique_ptr<BaseIRValue> visitMulExp(const MulExpAST* ast );
@@ -48,10 +52,6 @@ public:
     std::unique_ptr<BaseIRValue> visitPrimaryExp(const PrimaryExpAST* ast );
     std::unique_ptr<BaseIRValue> visitUnaryExp(const UnaryExpAST* ast );
     std::unique_ptr<BaseIRValue> visitNumber(const NumberAST* ast );
-    std::unique_ptr<BaseIRValue> visitConstDecl(const ConstDeclAST* ast);
-    std::unique_ptr<BaseIRValue> visitConstDefs(const ConstDefsAST* ast);
-    std::unique_ptr<BaseIRValue> visitConstDef(const ConstDefAST* ast);
-    std::unique_ptr<BaseIRValue> visitConstInitVal(const ConstInitValAST* ast);
     std::unique_ptr<BaseIRValue> visitConstExp(const ConstExpAST* ast);
 
     std::unique_ptr<IRProgram> get_irprogram();
