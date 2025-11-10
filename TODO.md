@@ -33,9 +33,12 @@
 - [x] ast
 - [x] bison
 - [x] 符号表
-- [ ] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
+- [x] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
 - [ ] Koopa IR output
 - [ ] To_RiscV
+
+孩子们，这上面两个好像不用做。
+
 
 关于 多个 block 和 多个 function 的可能情况，现在还没有做出处理，暂时mark一下。
 

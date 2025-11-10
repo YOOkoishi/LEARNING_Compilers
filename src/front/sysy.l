@@ -15,6 +15,10 @@ using namespace std;
 
 %}
 
+
+%option yylineno
+%option debug
+
 /* 空白符和注释 */
 WhiteSpace    [ \t\n\r]*
 LineComment   "//".*
@@ -54,6 +58,8 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 
 "||"            { return LOR; }
 "&&"            { return LAND; }
+
+"="             { return '=';}
 
 
 .               { return yytext[0]; }

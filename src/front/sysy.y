@@ -12,13 +12,25 @@
 #include <string>
 #include "include/ast.h"
 
+
+
+
 // 声明 lexer 函数和错误处理函数
 int yylex();
 void yyerror(std::unique_ptr<BaseAST> &ast, const char *s);
 
+extern int yylineno;
+extern char* yytext;
+extern FILE* yyin;
+
 using namespace std;
 
 %}
+
+
+%define parse.error verbose
+
+%define parse.trace 
 
 // 定义 parser 函数和错误处理函数的附加参数
 // 我们需要返回一个字符串作为 AST, 所以我们把附加参数定义成字符串的智能指针
@@ -27,7 +39,7 @@ using namespace std;
 
 // yylval 的定义, 我们把它定义成了一个联合体 (union)
 // 因为 token 的值有的是字符串指针, 有的是整数
-// 之前我们在 lexer 中用到的 str_val 和 int_val 就是在这里被定义的
+// 之前我们在 lexer 中用到的 str_val和 int_val 就是在这里被定义的
 // 至于为什么要用字符串指针而不直接用 string 或者 unique_ptr<string>?
 // 请自行 STFW 在 union 里写一个带析构函数的类会出现什么情况
 %union {
@@ -42,14 +54,16 @@ using namespace std;
 %token <str_val> IDENT CONST
 %token <int_val> INT_CONST
 
-%token LE GE EQ NE LT GT 
+%token LE GE EQ NE LT GT  '='
 %token LOR LAND
 
+
+%left '='
 %left LOR
 %left LAND
 %left EQ NE
 %left LT LE GT GE
-%left '+' '-'
+%left '+' '-' 
 %left '*' '/' '%'
 
 // 非终结符的类型定义
@@ -188,7 +202,7 @@ ConstDefs
 
 
 ConstDef
-  : IDENT EQ ConstInitVal {
+  : IDENT '=' ConstInitVal {
   auto constdef = new ConstDefAST();
   constdef -> ident = *unique_ptr<string>($1);
   constdef -> constinitval = unique_ptr<BaseAST>($3);
@@ -478,5 +492,7 @@ Lval
 // 定义错误处理函数, 其中第二个参数是错误信息
 // parser 如果发生错误 (例如输入的程序出现了语法错误), 就会调用这个函数
 void yyerror(unique_ptr<BaseAST> &ast, const char *s) {
-  cerr << "error: " << s << endl;
+    // ✅ 输出详细错误信息
+    std::cerr << "Error at line " << yylineno << ": " << s << std::endl;
+    std::cerr << "Near token: '" << yytext << "'" << std::endl;
 }
