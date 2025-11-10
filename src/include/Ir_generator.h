@@ -28,6 +28,7 @@ private:
         return "%" + std::to_string(temp_counter++);
     }
     
+    int evaluateConstExp(const BaseAST* ast);
 public:
     IRGenerator();
     void visitCompUnit(const CompUnitAST* ast);
@@ -41,7 +42,7 @@ public:
     void visitConstDecl(const ConstDeclAST* ast);
     void visitConstDefs(const ConstDefsAST* ast);
     void visitConstDef(const ConstDefAST* ast);
-    std::unique_ptr<BaseIRValue> visitConstInitVal(const ConstInitValAST* ast);
+    void visitConstInitVal(const ConstInitValAST* ast);
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast );
     std::unique_ptr<BaseIRValue> visitAddExp(const AddExpAST* ast );
     std::unique_ptr<BaseIRValue> visitMulExp(const MulExpAST* ast );

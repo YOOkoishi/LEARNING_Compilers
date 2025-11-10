@@ -65,8 +65,8 @@ void IRGenerator::visitFunType(const FunTypeAST* ast){
 
 void IRGenerator::visitBlock(const BlockAST* ast){
     if(!ast) return;
-    // ✅ 进入新作用域
-    // ctx.symbol_table->enterScope();
+    
+    ctx.symbol_table->enterScope();
     
     if(ast -> blockitems){
         if(auto blockitems = dynamic_cast<const BlockItemsAST*>(ast ->blockitems.get())){
@@ -74,8 +74,7 @@ void IRGenerator::visitBlock(const BlockAST* ast){
         }
     }
     
-    // ✅ 离开作用域
-    // ctx.symbol_table->exitScope();
+    ctx.symbol_table->exitScope();
 }
 
 
@@ -153,8 +152,47 @@ void IRGenerator::visitConstDefs(const ConstDefsAST* ast){
 
 void IRGenerator::visitConstDef(const ConstDefAST* ast){
     if(!ast) return ;
-    ctx.symbol_table->symbol_table.back().insert(ast->ident,)
+    
+    int cosnt_value = evaluateConstExp(ast->constinitval.get());
+
+    try
+    {
+        ctx.symbol_table->declare(
+            ast->ident,
+            SymbolType::CONST,
+            DataType::INT,
+            cosnt_value
+        );
+    }
+    catch(const std::runtime_error& e)
+    {
+        std::cerr << "Error in constant declaration" << e.what() << '\n';
+    }
+    
+
 }
+
+/*
+
+void IRGenerator::visitConstInitVal(const ConstInitValAST* ast){
+    if(!ast) return;
+    if(auto constexp = dynamic_cast<ConstExpAST*>(ast->constexp.get())){
+        visitConstExp(constexp);
+    }
+}
+
+
+
+std::unique_ptr<BaseIRValue> IRGenerator::visitConstExp(const ConstExpAST* ast){
+    
+if(!ast) return;
+if(auto exp = dynamic_cast<ExpAST*>(ast->exp.get())){
+    visitExp(exp);
+}
+}
+
+
+*/
 
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast){
@@ -539,6 +577,24 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
             return visitNumber(number);
         } 
     }
+    else if(ast-> type == PrimaryExpAST::LVAL){
+        if(auto lval = dynamic_cast<LValAST*>(ast->lval.get())){
+            auto symbol = ctx.symbol_table->lookup(lval -> ident);
+
+            if(!symbol) {
+                throw std::runtime_error("Undefined variable: " + lval->ident);
+            } 
+
+
+            if(symbol -> type == SymbolType::CONST){
+                auto value = std::make_unique<IntegerIRValue>();
+                value -> value = symbol ->const_value;
+                return value;
+            }
+
+            throw std::runtime_error("Variables not supported yet");
+        }
+    }
     return nullptr;
 }
 
@@ -554,4 +610,165 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitNumber(const NumberAST* ast){
 
 std::unique_ptr<IRProgram> IRGenerator::get_irprogram(){
     return std::move(program);
+}
+
+
+
+
+
+
+int IRGenerator::evaluateConstExp(const BaseAST* ast) {
+    if (!ast) return 0;
+    
+    // ===== Number =====
+    if (auto number = dynamic_cast<const NumberAST*>(ast)) {
+        return number->int_const;
+    }
+    
+    // ===== ConstInitVal =====
+    if (auto init_val = dynamic_cast<const ConstInitValAST*>(ast)) {
+        return evaluateConstExp(init_val->constexp.get());
+    }
+    
+    // ===== ConstExp =====
+    if (auto const_exp = dynamic_cast<const ConstExpAST*>(ast)) {
+        return evaluateConstExp(const_exp->exp.get());
+    }
+    
+    // ===== Exp =====
+    if (auto exp = dynamic_cast<const ExpAST*>(ast)) {
+        return evaluateConstExp(exp->lorexp.get());
+    }
+    
+    // ===== LOrExp =====
+    if (auto lorexp = dynamic_cast<const LOrExpAST*>(ast)) {
+        if (lorexp->type == LOrExpAST::LANDEXP) {
+            return evaluateConstExp(lorexp->landexp.get());
+        } else {
+            int left = evaluateConstExp(lorexp->lorexp.get());
+            int right = evaluateConstExp(lorexp->landexp.get());
+            return left || right;
+        }
+    }
+    
+    // ===== LAndExp =====
+    if (auto landexp = dynamic_cast<const LAndExpAST*>(ast)) {
+        if (landexp->type == LAndExpAST::EQEXP) {
+            return evaluateConstExp(landexp->eqexp.get());
+        } else {
+            int left = evaluateConstExp(landexp->landexp.get());
+            int right = evaluateConstExp(landexp->eqexp.get());
+            return left && right;
+        }
+    }
+    
+    // ===== EqExp =====
+    if (auto eqexp = dynamic_cast<const EqExpAST*>(ast)) {
+        if (eqexp->type == EqExpAST::RELEXP) {
+            return evaluateConstExp(eqexp->relexp.get());
+        } else {
+            int left = evaluateConstExp(eqexp->eqexp.get());
+            int right = evaluateConstExp(eqexp->relexp.get());
+            if (eqexp->op == "==") {
+                return left == right;
+            } else {  // !=
+                return left != right;
+            }
+        }
+    }
+    
+    // ===== RelExp =====
+    if (auto relexp = dynamic_cast<const RelExpAST*>(ast)) {
+        if (relexp->type == RelExpAST::ADDEXP) {
+            return evaluateConstExp(relexp->addexp.get());
+        } else {
+            int left = evaluateConstExp(relexp->relexp.get());
+            int right = evaluateConstExp(relexp->addexp.get());
+            if (relexp->op == "<") {
+                return left < right;
+            } else if (relexp->op == ">") {
+                return left > right;
+            } else if (relexp->op == "<=") {
+                return left <= right;
+            } else {  // >=
+                return left >= right;
+            }
+        }
+    }
+    
+    // ===== AddExp =====
+    if (auto addexp = dynamic_cast<const AddExpAST*>(ast)) {
+        if (addexp->type == AddExpAST::MULONLY) {
+            return evaluateConstExp(addexp->mulexp.get());
+        } else {
+            int left = evaluateConstExp(addexp->addexp.get());
+            int right = evaluateConstExp(addexp->mulexp.get());
+            if (addexp->op == "+") {
+                return left + right;
+            } else {  // -
+                return left - right;
+            }
+        }
+    }
+    
+    // ===== MulExp =====
+    if (auto mulexp = dynamic_cast<const MulExpAST*>(ast)) {
+        if (mulexp->type == MulExpAST::UNARYEXP) {
+            return evaluateConstExp(mulexp->unrayexp.get());
+        } else {
+            int left = evaluateConstExp(mulexp->mulexp.get());
+            int right = evaluateConstExp(mulexp->unrayexp.get());
+            if (mulexp->op == "*") {
+                return left * right;
+            } else if (mulexp->op == "/") {
+                if (right == 0) {
+                    throw std::runtime_error("Division by zero in constant expression");
+                }
+                return left / right;
+            } else {  // %
+                if (right == 0) {
+                    throw std::runtime_error("Modulo by zero in constant expression");
+                }
+                return left % right;
+            }
+        }
+    }
+    
+    // ===== UnaryExp =====
+    if (auto unaryexp = dynamic_cast<const UnaryExpAST*>(ast)) {
+        if (unaryexp->type == UnaryExpAST::PRIMARYEXP) {
+            return evaluateConstExp(unaryexp->primaryexp.get());
+        } else {
+            int value = evaluateConstExp(unaryexp->unaryexp.get());
+            if (unaryexp->unaryop == "+") {
+                return value;
+            } else if (unaryexp->unaryop == "-") {
+                return -value;
+            } else {  // !
+                return !value;
+            }
+        }
+    }
+    
+    // ===== PrimaryExp =====
+    if (auto primaryexp = dynamic_cast<const PrimaryExpAST*>(ast)) {
+        if (primaryexp->type == PrimaryExpAST::NUMBER) {
+            return evaluateConstExp(primaryexp->number.get());
+        } else if (primaryexp->type == PrimaryExpAST::EXP) {
+            return evaluateConstExp(primaryexp->exp.get());
+        } else if (primaryexp->type == PrimaryExpAST::LVAL) {
+            // ✅ LVal：从符号表查询
+            auto lval = dynamic_cast<LValAST*>(primaryexp->lval.get());
+            auto symbol = ctx.symbol_table->lookup(lval->ident);
+            if (!symbol) {
+                throw std::runtime_error("Undefined constant: " + lval->ident);
+            }
+            if (symbol->type != SymbolType::CONST) {
+                throw std::runtime_error("'" + lval->ident + "' is not a constant");
+            }
+            return symbol->const_value;
+        }
+    }
+    
+    throw std::runtime_error("Cannot evaluate constant expression");
 }

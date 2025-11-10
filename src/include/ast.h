@@ -254,7 +254,7 @@ public:
 
 class ConstInitValAST : public BaseAST {
 public:
-    std::string constexp;
+    std::unique_ptr<BaseAST> constexp;
 };
 
 
