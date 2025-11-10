@@ -80,3 +80,43 @@ void RelExpAST :: Dump() const{
 void LAndExpAST:: Dump() const{
     
 }
+
+void BlockItemsAST :: Dump() const{
+
+}
+
+void BlockItemAST :: Dump() const{
+
+}
+
+void DeclAST :: Dump() const{
+
+}
+
+void ConstDeclAST :: Dump() const {
+
+}
+
+void BTypeAST :: Dump() const {
+
+}
+
+void ConstDefsAST :: Dump() const {
+
+}
+
+void ConstDefAST :: Dump() const {
+
+}
+
+void ConstInitValAST :: Dump() const {
+
+}
+
+void ConstExpAST :: Dump() const{
+
+}
+
+void LValAST :: Dump() const{
+    
+}

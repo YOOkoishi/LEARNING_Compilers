@@ -106,13 +106,13 @@ Block
 BlockItems
   : BlockItem {
     auto blockitems = new BlockItemsAST();
-    blockitems -> item.push_back(unique_pte<BaseAST>($1));
+    blockitems -> item.push_back(unique_ptr<BaseAST>($1));
     $$ = blockitems;    
 
   }
   | BlockItems BlockItem {
-    auto blockitems = dynamic_cast<BLockItemsAST*>($1);
-    blockitems -> item.push_back(unique_pte<BaseAST>($2));
+    auto blockitems = dynamic_cast<BlockItemsAST*>($1);
+    blockitems -> item.push_back(unique_ptr<BaseAST>($2));
     $$ = blockitems;
   }
   ;
@@ -123,12 +123,14 @@ BlockItems
 BlockItem 
   : Decl {
     auto blockitem = new BlockItemAST();
+    blockitem -> type = BlockItemAST::DECL;
     blockitem -> decl = unique_ptr<BaseAST>($1);
     $$ = blockitem;
 
   }
   | Stmt {
     auto blockitem = new BlockItemAST();
+    blockitem -> type = BlockItemAST::STMT;
     blockitem -> stmt = unique_ptr<BaseAST>($1);
     $$ = blockitem;
   }
@@ -160,6 +162,7 @@ BType
   : INT {
     auto btype = new BTypeAST();
     btype -> val = "int";
+    $$ = btype;
 
   }
   ;
@@ -174,7 +177,7 @@ ConstDefs
 
   }
   | ConstDefs ',' ConstDef {
-    auto constdefs = dynamic_cast<ConstDefAST*>($1);
+    auto constdefs = dynamic_cast<ConstDefsAST*>($1);
     constdefs -> constdef.push_back(unique_ptr<BaseAST>($3));
     $$ = constdefs;
 
@@ -192,7 +195,7 @@ ConstDef
   $$ = constdef;    
 
   }
-
+  ;
 
 
 
@@ -202,14 +205,14 @@ ConstInitVal
     constinitval -> constexp = unique_ptr<BaseAST>($1);
     $$ = constinitval ;
   }
-
+  ;
 
 
 
 ConstExp
   : Exp {
     auto constexp = new ConstExpAST();
-    constexp -> exp = unique_ptr(BaseAST)($1);
+    constexp -> exp = unique_ptr<BaseAST>($1);
     $$ = constexp;
   }
   ;

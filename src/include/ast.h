@@ -48,6 +48,7 @@ public:
 class BlockItemsAST : public BaseAST{
 public:
     std::vector<std::unique_ptr<BaseAST>> item;
+    void Dump() const override;
 };
 
 
@@ -63,6 +64,7 @@ public:
 
     std::unique_ptr<BaseAST> decl;
     std::unique_ptr<BaseAST> stmt;
+    void Dump() const override;
 };
 
 
@@ -218,7 +220,7 @@ class DeclAST : public BaseAST {
 public:
 
     std::unique_ptr<BaseAST> constdecl;
-
+    void Dump() const override;
 };
 
 
@@ -226,19 +228,22 @@ class ConstDeclAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> btype;
     std::unique_ptr<BaseAST> constdefs;
+    void Dump() const override;
 };
 
 
 
-class BType : public BaseAST {
+class BTypeAST : public BaseAST {
 public:
     std::string val ;
+    void Dump() const override;
 };
 
 
 class ConstDefsAST : public BaseAST {
 public: 
     std::vector<std::unique_ptr<BaseAST>> constdef ;
+    void Dump() const override;
 
 };
 
@@ -248,6 +253,7 @@ public:
 
     std::string ident;
     std::unique_ptr<BaseAST> constinitval;
+    void Dump() const override;
     
 };
 
@@ -255,18 +261,21 @@ public:
 class ConstInitValAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> constexp;
+    void Dump() const override;
 };
 
 
 class ConstExpAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> exp;
+    void Dump() const override;
 };
 
 
 class LValAST : public BaseAST {
 public:
     std::string ident;
+    void Dump() const override;
 };
 
 
