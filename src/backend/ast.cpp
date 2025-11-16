@@ -29,9 +29,6 @@ void BlockAST :: Dump() const{
 
 void StmtAST :: Dump() const{
     std::cout << "StmtAST { ";
-    std::cout << retrn;
-    exp -> Dump();
-    std::cout << fenhao;
     std::cout << " } ";
 }
 

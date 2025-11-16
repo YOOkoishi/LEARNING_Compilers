@@ -73,9 +73,15 @@ public:
 
 class StmtAST : public BaseAST {
 public:
-    std::string retrn = "return";
+    enum Type {
+        RETURNEXP,
+        LVALEXP
+    }type;
+
+    StmtAST(Type t) : type(t){};
+    StmtAST(){};    
+    std::unique_ptr<BaseAST> lval;
     std::unique_ptr<BaseAST> exp;
-    std::string fenhao = ";";
     void Dump() const override;
 };
 
@@ -218,7 +224,15 @@ public:
 
 class DeclAST : public BaseAST {
 public:
+    enum Type {
+        CONST,
+        VAR
+    } type;
 
+
+    DeclAST(Type t) : type(t) {};
+    DeclAST(){};
+    std::unique_ptr<BaseAST> vardecal;
     std::unique_ptr<BaseAST> constdecl;
     void Dump() const override;
 };
@@ -278,5 +292,50 @@ public:
     void Dump() const override;
 };
 
+
+// 下面是变量相关的内容
+
+class VarDeclAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> btype;
+    std::unique_ptr<BaseAST> vardefs;
+
+    void Dump() const override;    
+};
+
+
+
+
+class VarDefsAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> vardef;
+    void Dump() const override;
+};
+
+
+class VarDefAST : public BaseAST {
+public:
+    enum Type {
+        IDENT,
+        IDENTDEF
+    } type;
+
+    VarDefAST(Type t) : type( t) {};
+    VarDefAST() {};
+    std::unique_ptr<BaseAST> ident;
+    std::unique_ptr<BaseAST> initval;
+
+    void Dump() const override;
+};
+
+
+
+
+class InitValAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> exp;
+
+    void Dump() const override;
+};
 
 

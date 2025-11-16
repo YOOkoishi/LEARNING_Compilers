@@ -119,7 +119,7 @@ void IRGenerator::visitDecl(const DeclAST* ast){
 
 void IRGenerator::visitStmt(const StmtAST* ast){
     if(!ast)return;
-    if(ast ->retrn == "return" && ast->exp){
+    if(ast -> type == StmtAST::RETURNEXP){
         if(auto exp = dynamic_cast<const ExpAST*>(ast->exp.get())){
            auto result = visitExp(exp);
            auto ret_ir = std::make_unique<ReturnIRValue>();

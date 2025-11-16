@@ -44,3 +44,11 @@
 
 对于 4.2
 
+
+- [x] ast
+- [ ] bison
+- [ ] 符号表
+- [ ] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
+- [ ] Koopa IR output
+- [ ] To_RiscV
+
