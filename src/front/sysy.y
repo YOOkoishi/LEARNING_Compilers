@@ -70,6 +70,7 @@ using namespace std;
 %type <ast_val> FuncDef FuncType Block Stmt Number 
 %type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp ConstExp
 %type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval ConstDefs BType
+%type <ast_val> VarDecl VarDef VarDefs InitVal
 /* %type <int_val>  */
 %type <str_val> UnaryOp
 
@@ -155,8 +156,13 @@ BlockItem
 
 Decl
   : ConstDecl {
-    auto decl = new DeclAST();
+    auto decl = new DeclAST(DeclAST::CONST);
     decl -> constdecl = unique_ptr<BaseAST>($1);
+    $$ = decl;
+  }
+  | VarDecl {
+    auto decl = new DeclAST(DeclAST::VAR);
+    decl -> vardecl = unique_ptr<BaseAST>($1);
     $$ = decl;
   }
   ;
