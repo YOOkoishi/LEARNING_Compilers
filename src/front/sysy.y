@@ -168,6 +168,52 @@ Decl
   ;
 
 
+
+VarDecl
+  : BType VarDefs {
+    auto vardecl = new VarDeclAST();
+    vardecl -> vardefs = unique_ptr<BaseAST>($2);
+    $$ = vardecl;
+  }
+  ;
+
+
+
+VarDefs
+  : VarDef {
+    auto vardefs = new VarDefsAST();
+    vardefs -> vardef.push_back(unique_ptr<BaseAST>($1));
+    $$ = vardefs;
+  }
+  | VarDefs ',' VarDef {
+    auto vardefs = dynamic_cast<VarDefsAST*>($1);
+    vardefs -> vardef.push_back(unique_ptr<BaseAST>($3));
+    $$ = vardefs;
+     
+  }
+  ;
+
+
+
+VarDef
+  : IDENT {
+    auto vardef = new VarDefAST(VarDefAST::IDENT);
+    vardef -> ident = IDENT;
+    $$ = vardef;
+  }
+  | IDENT '=' InitVal {
+    auto vardef = new VarDefAST(VarDefAST::IDENTVAL);
+    vardef -> ident = IDENT;
+    vardef -> initval = unique_ptr<BaseAST>($3);
+    $$ = vardef;
+  }
+
+
+
+
+
+
+
 ConstDecl 
   : CONST BType ConstDefs ';' {
     auto constdecl = new ConstDeclAST();
