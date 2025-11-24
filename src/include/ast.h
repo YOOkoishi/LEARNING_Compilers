@@ -232,7 +232,7 @@ public:
 
     DeclAST(Type t) : type(t) {};
     DeclAST(){};
-    std::unique_ptr<BaseAST> vardecal;
+    std::unique_ptr<BaseAST> vardecl;
     std::unique_ptr<BaseAST> constdecl;
     void Dump() const override;
 };
@@ -322,7 +322,7 @@ public:
 
     VarDefAST(Type t) : type( t) {};
     VarDefAST() {};
-    std::unique_ptr<BaseAST> ident;
+    std::string ident;
     std::unique_ptr<BaseAST> initval;
 
     void Dump() const override;

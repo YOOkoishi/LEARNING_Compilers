@@ -198,16 +198,24 @@ VarDefs
 VarDef
   : IDENT {
     auto vardef = new VarDefAST(VarDefAST::IDENT);
-    vardef -> ident = IDENT;
+    vardef -> ident = *unique_ptr<string>($1);
     $$ = vardef;
   }
   | IDENT '=' InitVal {
-    auto vardef = new VarDefAST(VarDefAST::IDENTVAL);
-    vardef -> ident = IDENT;
+    auto vardef = new VarDefAST(VarDefAST::IDENTDEF);
+    vardef -> ident = *unique_ptr<string>($1);
     vardef -> initval = unique_ptr<BaseAST>($3);
     $$ = vardef;
   }
 
+
+InitVal
+  : Exp {
+    auto initval = new InitValAST();
+    initval -> exp = unique_ptr<BaseAST>($1);
+    $$ = initval;
+  }
+  ;
 
 
 
@@ -229,7 +237,6 @@ BType
     auto btype = new BTypeAST();
     btype -> val = "int";
     $$ = btype;
-
   }
   ;
 
@@ -288,8 +295,14 @@ ConstExp
 
 Stmt
   : RETURN Exp ';' {
-    auto stmt = new StmtAST();
+    auto stmt = new StmtAST(StmtAST::RETURNEXP);
     stmt -> exp = unique_ptr<BaseAST>($2);
+    $$ = stmt;
+  }
+  | Lval '=' Exp ';'{
+    auto stmt = new StmtAST(StmtAST::LVALEXP);
+    stmt -> lval = unique_ptr<BaseAST>($1);
+    stmt -> exp = unique_ptr<BaseAST>($3);
     $$ = stmt;
   }
   ;
