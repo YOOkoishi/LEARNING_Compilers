@@ -47,8 +47,8 @@
 
 - [x] ast
 - [x] bison
-- [ ] 符号表
-- [ ] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
+- [x] 符号表
+- [x] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
 - [ ] Koopa IR output
 - [ ] To_RiscV
 
