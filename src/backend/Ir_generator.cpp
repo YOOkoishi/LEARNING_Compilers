@@ -109,25 +109,81 @@ void IRGenerator::visitBlockItem(const BlockItemAST* ast){
 
 void IRGenerator::visitDecl(const DeclAST* ast){
     if(!ast) return;
-
-    if(auto constdecl = dynamic_cast<ConstDeclAST*>(ast->constdecl.get())){
-        visitConstDecl(constdecl);
+    if(ast->type == DeclAST::CONST){
+        if(auto constdecl = dynamic_cast<ConstDeclAST*>(ast->constdecl.get())){
+            visitConstDecl(constdecl);
+        }
+    }
+    else {
+        if(auto vardecl = dynamic_cast<VarDeclAST*>(ast -> vardecl.get())){
+            visitVarDecl(vardecl);
+        }
     }
 
 }
 
 
 void IRGenerator::visitStmt(const StmtAST* ast){
-    if(!ast)return;
-    if(ast -> type == StmtAST::RETURNEXP){
+    if(!ast) return;
+    if( ast->type ==  StmtAST::RETURNEXP) {
+        // return exp;
         if(auto exp = dynamic_cast<const ExpAST*>(ast->exp.get())){
-           auto result = visitExp(exp);
-           auto ret_ir = std::make_unique<ReturnIRValue>();
-           ret_ir ->return_value = std::move(result);
-           ctx.current_block->ADD_Value(std::move(ret_ir));
+            auto result = visitExp(exp);
+            auto ret_ir = std::make_unique<ReturnIRValue>();
+            ret_ir->return_value = std::move(result);
+            ctx.current_block->ADD_Value(std::move(ret_ir));
         }
     }
+    
+    else if(ast->type == StmtAST::LVALEXP){
+        // lval = exp;
+        auto lval = dynamic_cast<LValAST*>(ast->lval.get());
+        auto exp = dynamic_cast<ExpAST*>(ast->exp.get());
+        
+        if(!lval || !exp) {
+            std::cerr << "Error: Invalid assignment statement" << std::endl;
+            return;
+        }
+        
+        // 1. 查找变量是否存在
+        auto symbol = ctx.symbol_table->lookup(lval->ident);
+        if(!symbol) {
+            std::cerr << "Error: Undefined variable '" << lval->ident << "'" << std::endl;
+            return;
+        }
+        
+        // 2. 检查是否为常量（常量不能被赋值）
+        if(symbol->type == SymbolType::CONST) {
+            std::cerr << "Error: Cannot assign to constant '" << lval->ident << "'" << std::endl;
+            return;
+        }
+        
+        // 3. 计算右侧表达式的值
+        auto rhs_value = visitExp(exp);
+        
+        // 4. 生成 store 指令
+        std::string var_name = "@" + lval->ident;
+        auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), var_name);
+        ctx.current_block->ADD_Value(std::move(store_ir));
+        
+    }
+    else{
+        std::cerr << "Error: Unknown statement type" << std::endl;
+    }
 }
+
+
+
+/*
+
+
+
+下面是常量相关内容
+
+
+
+*/
+
 
 
 
@@ -193,6 +249,110 @@ if(auto exp = dynamic_cast<ExpAST*>(ast->exp.get())){
 
 
 */
+
+
+
+
+void IRGenerator::visitVarDecl(const VarDeclAST* ast){
+    if(!ast) return ;
+    if(auto vardefs = dynamic_cast<VarDefsAST*>(ast ->vardefs.get())){
+        visitVarDefs(vardefs);
+    }
+}
+
+
+
+
+
+void IRGenerator::visitVarDefs(const VarDefsAST* ast){
+    if(!ast) return;
+    for(const auto& x : ast -> vardef){
+           if(auto vardef = dynamic_cast<VarDefAST*>(x.get())){
+                visitVarDef(vardef);
+           }
+    }
+}
+
+
+
+
+void IRGenerator::visitVarDef(const VarDefAST* ast){
+    if(!ast) return;
+
+    std::string var_name = "@" + ast->ident ; 
+
+    if(ast ->type == VarDefAST::IDENT){
+        try
+        {
+            ctx.symbol_table->declare(
+                ast->ident,
+                SymbolType::VAR,
+                DataType::INT
+            );
+        }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << "Error in variable declaration" << e.what() << '\n';
+        }
+        
+        // only allocIR
+        auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+        ctx.current_block ->ADD_Value(std::move(alloc));
+
+    }
+    else if(ast ->type == VarDefAST::IDENTDEF){
+        try
+        {
+            ctx.symbol_table->declare(
+                ast->ident,
+                SymbolType::VAR,
+                DataType::INT
+            );
+        }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << "Error in variable declaration" << e.what() << '\n';
+        }
+
+        // allocIR
+        auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+
+        ctx.current_block ->ADD_Value(std::move(alloc));    
+        
+        
+        //storeIR 
+
+        if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
+            if(auto exp = dynamic_cast<ExpAST*>(initval ->exp.get())){
+                auto var_value = visitExp(exp);
+                auto store = std::make_unique<StoreIRValue>(std::move(var_value),var_name);
+
+                ctx.current_block->ADD_Value(std::move(store));
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+/*
+
+
+
+
+下面是运算表达式
+
+
+
+
+*/
+
+
 
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitExp(const ExpAST* ast){
@@ -591,8 +751,21 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
                 value -> value = symbol ->const_value;
                 return value;
             }
+            else if(symbol -> type == SymbolType::VAR){
+                std::string var_name = "@" + lval -> ident;
+                std::string temp_name = generate_temp_name();
 
-            throw std::runtime_error("Variables not supported yet");
+                auto load = std::make_unique<LoadIRValue>();
+                load ->result_name = temp_name;
+                load ->src = var_name;
+                ctx.current_block->ADD_Value(std::move(load));
+
+                auto temp = std::make_unique<TemporaryIRValue>();
+                temp -> temp_name = temp_name;
+                return temp;
+                
+            }
+            
         }
     }
     return nullptr;

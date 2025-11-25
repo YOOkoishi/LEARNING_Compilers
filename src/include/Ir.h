@@ -29,6 +29,11 @@ public:
 };
 
 
+
+
+
+
+
 class ConstIRValue : public BaseIRValue{
 public:
     std::string name;
@@ -53,12 +58,16 @@ public:
 
 
 
+
 class ReturnIRValue : public BaseIRValue{
 public:
     std::unique_ptr<BaseIRValue> return_value;  
     void Dump() const override;
     void To_RiscV() const override;
 };
+
+
+
 
 
 
@@ -70,6 +79,58 @@ public:
     void Dump() const override;
     void To_RiscV() const override;
 };
+
+
+
+
+
+class AllocIRValue : public BaseIRValue{
+public:
+    std::string var_name;
+    std::string type;
+
+    AllocIRValue(const std::string& name, const std::string& t): var_name(name),type(t){};
+    AllocIRValue(){};
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
+
+
+class LoadIRValue : public BaseIRValue{
+public:
+    std::string src;           // 源地址变量名，如 @x
+    std::string result_name;   // 结果临时变量，如 %0
+
+    LoadIRValue() = default;
+    LoadIRValue(const std::string& s, const std::string& r)
+        : src(s), result_name(r) {}
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
+
+
+
+class StoreIRValue : public BaseIRValue{
+public:
+    std::unique_ptr<BaseIRValue> value;  // 要存储的值
+    std::string dest;                     // 目标地址变量名，如 @x
+
+    StoreIRValue() = default;
+    StoreIRValue(std::unique_ptr<BaseIRValue> v, const std::string& d)
+        : value(std::move(v)), dest(d) {}
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
+
 
 
 
@@ -113,6 +174,9 @@ private:
     void emitComparisonOp(Operation op, char reg_num,
                           IntegerIRValue* left_int, IntegerIRValue* right_int) const;
 };
+
+
+
 
 
 

@@ -117,3 +117,26 @@ void ConstExpAST :: Dump() const{
 void LValAST :: Dump() const{
     
 }
+
+
+void VarDeclAST :: Dump() const{
+
+}
+
+
+void VarDefsAST :: Dump() const{
+
+}
+
+
+void VarDefAST :: Dump() const{
+
+}
+
+
+void InitValAST :: Dump() const{
+
+}
+
+
+

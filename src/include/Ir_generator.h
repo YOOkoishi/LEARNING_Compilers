@@ -43,6 +43,11 @@ public:
     void visitConstDefs(const ConstDefsAST* ast);
     void visitConstDef(const ConstDefAST* ast);
     void visitConstInitVal(const ConstInitValAST* ast);
+    void visitVarDecl(const VarDeclAST* ast);
+    void visitVarDefs(const VarDefsAST* ast);
+    void visitVarDef(const VarDefAST* ast);
+    void visitInitValAST(const InitValAST* ast);
+    
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast );
     std::unique_ptr<BaseIRValue> visitAddExp(const AddExpAST* ast );
     std::unique_ptr<BaseIRValue> visitMulExp(const MulExpAST* ast );

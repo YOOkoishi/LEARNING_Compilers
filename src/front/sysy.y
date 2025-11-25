@@ -170,7 +170,7 @@ Decl
 
 
 VarDecl
-  : BType VarDefs {
+  : BType VarDefs ';'{
     auto vardecl = new VarDeclAST();
     vardecl -> vardefs = unique_ptr<BaseAST>($2);
     $$ = vardecl;

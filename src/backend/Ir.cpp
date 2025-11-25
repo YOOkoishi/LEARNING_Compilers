@@ -21,6 +21,25 @@ void ReturnIRValue::Dump() const{
 
 
 
+void StoreIRValue::Dump() const {
+
+}
+
+
+
+void AllocIRValue::Dump() const {
+
+}
+
+
+
+void LoadIRValue::Dump() const {
+
+}
+
+
+
+
 void IntegerIRValue::Dump() const{
     std::cout<<value;
 }
@@ -503,3 +522,29 @@ void BinaryIRValue::emitComparisonOp(Operation op, char reg_num,
 void TemporaryIRValue::To_RiscV() const{
     std::cout<<"t" << char(((temp_name[1] - '0') % 6) + '0');
 }
+
+
+
+void AllocIRValue::To_RiscV() const{
+
+}
+
+
+
+
+
+void StoreIRValue::To_RiscV() const{
+
+}
+
+
+
+
+
+void LoadIRValue::To_RiscV() const{
+
+}
+
+
+
+
