@@ -4,6 +4,46 @@
 #include "Ir.h"
 #include "ast.h"
 #include "symbol.h"
+#include <unordered_map>
+
+
+
+
+
+// 栈帧管理器
+class StackFrameManager {
+private:
+    std::unordered_map<std::string, int> var_offsets;
+    int current_offset = 0;
+    
+public:
+    int allocate(const std::string& name, int size = 4) {
+        int offset = current_offset;
+        var_offsets[name] = offset;
+        current_offset += size;
+        return offset;
+    }
+    
+    int getOffset(const std::string& name) const {
+        auto it = var_offsets.find(name);
+        if (it != var_offsets.end()) {
+            return it->second;
+        }
+        return -1;
+    }
+    
+    int getAlignedSize() const {
+        return (current_offset + 15) / 16 * 16;
+    }
+    
+    void reset() {
+        var_offsets.clear();
+        current_offset = 0;
+    }
+};
+
+
+
 
 
 struct GenContext
@@ -11,6 +51,9 @@ struct GenContext
     IRBasicBlock* current_block = nullptr;
     SymbolTable* symbol_table = nullptr;
     IRProgram* program = nullptr;
+    StackFrameManager stack;
+
+    static GenContext* current_ctx;
 };
 
 

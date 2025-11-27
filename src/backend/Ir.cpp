@@ -1,8 +1,22 @@
 #include "../include/include.h"
 #include "../include/Ir.h"
+#include "../include/Ir_generator.h"
+
+
+
+GenContext* GenContext::current_ctx = nullptr;
+
+
+
+
+
+
 
 
 // 各类型IR Dump() 函数的定义
+
+
+
 
 
 void ReturnIRValue::Dump() const{
@@ -20,21 +34,22 @@ void ReturnIRValue::Dump() const{
 
 
 
+void AllocIRValue::Dump() const {
+    std::cout << "  " << var_name << " = alloc " << type << std::endl;
+}
+
 
 void StoreIRValue::Dump() const {
-
+    std::cout << "  store ";
+    if (value) {
+        value->Dump();  
+    }
+    std::cout << ", " << dest << std::endl;
 }
-
-
-
-void AllocIRValue::Dump() const {
-
-}
-
 
 
 void LoadIRValue::Dump() const {
-
+    std::cout << "  " << result_name << " = load " << src << std::endl;
 }
 
 
@@ -228,12 +243,43 @@ void IRProgram::To_RiscV() const{
 
 
 void IRFunction::To_RiscV() const{
+    GenContext ctx;
+    GenContext::current_ctx = &ctx;
+
+    for(const auto& block : ir_basicblock){
+        for (const auto& value : block ->ir_value){
+            if(auto* alloc = dynamic_cast<AllocIRValue*>(value.get())){
+                ctx.stack.allocate(alloc->var_name);
+            }   
+            else if(auto* load = dynamic_cast<LoadIRValue*>(value.get())){
+                ctx.stack.allocate(load->result_name);
+            }
+            else if(auto* binary = dynamic_cast<BinaryIRValue*>(value.get())){
+                ctx.stack.allocate(binary->result_name);
+            }
+        }
+    }
+
+    int frame_size = ctx.stack.getAlignedSize();
+
+
+    //second time
     std::cout<<"  .global "<<function_name<<std::endl;
     std::cout<<function_name<<":\n";
+
+    if(frame_size > 0){
+        std::cout << "  addi sp, sp, -" << frame_size << std::endl;
+    }    
+
     for(const auto &block : ir_basicblock){
         block ->To_RiscV();
     }
+
+
+    GenContext::current_ctx = nullptr;
 }
+
+
 
 
 void IRBasicBlock::To_RiscV() const{
@@ -245,304 +291,131 @@ void IRBasicBlock::To_RiscV() const{
 
 
 void ReturnIRValue::To_RiscV() const{
+    auto& stack = GenContext::current_ctx->stack;
+    
     if(auto int_val = dynamic_cast<IntegerIRValue*>(return_value.get())) {
         if(int_val->value == 0) {
-            std::cout << "  mv a0, x0";
+            std::cout << "  mv a0, x0" << std::endl;
         } else {
-            std::cout << "  li a0, " << int_val->value;
+            std::cout << "  li a0, " << int_val->value << std::endl;
         }
-    } else {
-        std::cout << "  mv a0, ";
-        return_value->To_RiscV();
+    } else if(auto temp = dynamic_cast<TemporaryIRValue*>(return_value.get())) {
+        int offset = stack.getOffset(temp->temp_name);
+        std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
     }
-    std::cout << std::endl;
+    
+    // epilogue
+    int frame_size = stack.getAlignedSize();
+    if (frame_size > 0) {
+        std::cout << "  addi sp, sp, " << frame_size << std::endl;
+    }
     std::cout << "  ret";
 }
 
 
 void IntegerIRValue::To_RiscV() const{
-        std::cout<<value;
+    // 通常不直接调用，由其他指令处理
+    std::cout << value;
 }
 
 
 void BinaryIRValue::To_RiscV() const {
-    char reg_num = result_name[1];
-    reg_num = char('0' + (((reg_num)-'0') % 6));
-    auto left_int = dynamic_cast<IntegerIRValue*>(left.get());
-    auto right_int = dynamic_cast<IntegerIRValue*>(right.get());
+    auto& stack = GenContext::current_ctx->stack;
+    int result_offset = stack.getOffset(result_name);
     
-    // 根据操作类型选择指令名称
-    std::string op_name;
+    // 加载左操作数到 t0
+    if (auto* left_int = dynamic_cast<IntegerIRValue*>(left.get())) {
+        std::cout << "  li t0, " << left_int->value << std::endl;
+    } else if (auto* left_temp = dynamic_cast<TemporaryIRValue*>(left.get())) {
+        int left_offset = stack.getOffset(left_temp->temp_name);
+        std::cout << "  lw t0, " << left_offset << "(sp)" << std::endl;
+    }
+    
+    // 加载右操作数到 t1
+    if (auto* right_int = dynamic_cast<IntegerIRValue*>(right.get())) {
+        std::cout << "  li t1, " << right_int->value << std::endl;
+    } else if (auto* right_temp = dynamic_cast<TemporaryIRValue*>(right.get())) {
+        int right_offset = stack.getOffset(right_temp->temp_name);
+        std::cout << "  lw t1, " << right_offset << "(sp)" << std::endl;
+    }
+    
+    // 执行运算，结果放在 t0
     switch (operation) {
-        case ADD: op_name = "add"; break;
-        case SUB: op_name = "sub"; break;
-        case MUL: op_name = "mul"; break;
-        case DIV: op_name = "div"; break;
-        case MOD: op_name = "rem"; break;
-        case LT:  op_name = "slt"; break;
-        case GT:  op_name = "sgt"; break;
-        case AND: op_name = "and"; break;
-        case OR:  op_name = "or";  break;
-        
-        // 比较操作需要特殊处理
-        case EQ:
-        case NE:
+        case ADD: std::cout << "  add t0, t0, t1" << std::endl; break;
+        case SUB: std::cout << "  sub t0, t0, t1" << std::endl; break;
+        case MUL: std::cout << "  mul t0, t0, t1" << std::endl; break;
+        case DIV: std::cout << "  div t0, t0, t1" << std::endl; break;
+        case MOD: std::cout << "  rem t0, t0, t1" << std::endl; break;
+        case LT:  std::cout << "  slt t0, t0, t1" << std::endl; break;
+        case GT:  std::cout << "  sgt t0, t0, t1" << std::endl; break;
+        case AND: std::cout << "  and t0, t0, t1" << std::endl; break;
+        case OR:  std::cout << "  or t0, t0, t1" << std::endl; break;
         case LE:
+            std::cout << "  sgt t0, t0, t1" << std::endl;
+            std::cout << "  xori t0, t0, 1" << std::endl;
+            break;
         case GE:
-            emitComparisonOp(operation, reg_num, left_int, right_int);
-            return;
-            
+            std::cout << "  slt t0, t0, t1" << std::endl;
+            std::cout << "  xori t0, t0, 1" << std::endl;
+            break;
+        case EQ:
+            std::cout << "  xor t0, t0, t1" << std::endl;
+            std::cout << "  seqz t0, t0" << std::endl;
+            break;
+        case NE:
+            std::cout << "  xor t0, t0, t1" << std::endl;
+            std::cout << "  snez t0, t0" << std::endl;
+            break;
         default:
             std::cout << "  # Unknown operation" << std::endl;
-            return;
-    }
-    
-    // 统一处理算术和逻辑运算
-    emitBinaryOp(op_name, reg_num, left_int, right_int);
-}
-
-// 辅助方法：生成二元运算指令
-void BinaryIRValue::emitBinaryOp(const std::string& op_name, char reg_num,
-                                   IntegerIRValue* left_int, IntegerIRValue* right_int) const {
-    // 情况1：两个立即数
-    if (left_int && right_int) {
-        emitTwoImmediates(op_name, reg_num, left_int->value, right_int->value);
-    }
-    // 情况2：左立即数，右寄存器
-    else if (left_int) {
-        emitLeftImmediate(op_name, reg_num, left_int->value);
-    }
-    // 情况3：左寄存器，右立即数
-    else if (right_int) {
-        emitRightImmediate(op_name, reg_num, right_int->value);
-    }
-    // 情况4：两个寄存器
-    else {
-        emitTwoRegisters(op_name, reg_num);
-    }
-}
-
-// 处理两个立即数的情况
-void BinaryIRValue::emitTwoImmediates(const std::string& op_name, char reg_num,
-                                       int left_val, int right_val) const {
-    // 零值优化
-    if (left_val == 0 && right_val == 0) {
-        std::cout << "  " << op_name << " t" << reg_num << ", x0, x0";
-        return;
-    }
-    
-    // 加法/减法的零值优化
-    if (op_name == "add" || op_name == "sub") {
-        if (left_val == 0) {
-            if (op_name == "sub") {
-                // 0 - right = -right
-                std::cout << "  li t6, " << right_val << std::endl;
-                std::cout << "  sub t" << reg_num << ", x0, t6";
-            } else {
-                // 0 + right = right
-                std::cout << "  li t" << reg_num << ", " << right_val;
-            }
-            return;
-        }
-        if (right_val == 0) {
-            // left +/- 0 = left
-            std::cout << "  li t" << reg_num << ", " << left_val;
-            return;
-        }
-    }
-    
-    // 乘法的特殊值优化
-    if (op_name == "mul") {
-        if (left_val == 0 || right_val == 0) {
-            std::cout << "  mul t" << reg_num << ", x0, x0";
-            return;
-        }
-        if (left_val == 1) {
-            std::cout << "  li t" << reg_num << ", " << right_val;
-            return;
-        }
-        if (right_val == 1) {
-            std::cout << "  li t" << reg_num << ", " << left_val;
-            return;
-        }
-    }
-    
-    // 除法的特殊值优化
-    if (op_name == "div") {
-        if (left_val == 0) {
-            std::cout << "  li t6, " << right_val << std::endl;
-            std::cout << "  div t" << reg_num << ", x0, t6";
-            return;
-        }
-        if (right_val == 1) {
-            std::cout << "  li t" << reg_num << ", " << left_val;
-            return;
-        }
-    }
-    
-    // 取模的特殊值优化
-    if (op_name == "rem" && left_val == 0) {
-        std::cout << "  li t6, " << right_val << std::endl;
-        std::cout << "  rem t" << reg_num << ", x0, t6";
-        return;
-    }
-    
-    // 通用情况：加载两个立即数并计算
-    std::cout << "  li t" << reg_num << ", " << left_val << std::endl;
-    std::cout << "  li t6, " << right_val << std::endl;
-    std::cout << "  " << op_name << " t" << reg_num << ", t" << reg_num << ", t6";
-}
-
-// 处理左立即数的情况
-void BinaryIRValue::emitLeftImmediate(const std::string& op_name, char reg_num, int left_val) const {
-    // 零值优化
-    if (left_val == 0) {
-        std::cout << "  " << op_name << " t" << reg_num << ", x0, ";
-        right->To_RiscV();
-        return;
-    }
-    
-    // 乘法/除法的1优化
-    if ((op_name == "mul" || op_name == "div") && left_val == 1) {
-        std::cout << "  mv t" << reg_num << ", ";
-        right->To_RiscV();
-        return;
-    }
-    
-    // 通用情况
-    std::cout << "  li t" << reg_num << ", " << left_val << std::endl;
-    std::cout << "  " << op_name << " t" << reg_num << ", t" << reg_num << ", ";
-    right->To_RiscV();
-}
-
-// 处理右立即数的情况
-void BinaryIRValue::emitRightImmediate(const std::string& op_name, char reg_num, int right_val) const {
-    // 零值优化
-    if (right_val == 0) {
-        std::cout << "  " << op_name << " t" << reg_num << ", ";
-        left->To_RiscV();
-        std::cout << ", x0";
-        return;
-    }
-    
-    // 乘法/除法的1优化
-    if ((op_name == "mul" || op_name == "div") && right_val == 1) {
-        std::cout << "  mv t" << reg_num << ", ";
-        left->To_RiscV();
-        return;
-    }
-    
-    // 通用情况
-    std::cout << "  li t6, " << right_val << std::endl;
-    std::cout << "  " << op_name << " t" << reg_num << ", ";
-    left->To_RiscV();
-    std::cout << ", t6";
-}
-
-// 处理两个寄存器的情况
-void BinaryIRValue::emitTwoRegisters(const std::string& op_name, char reg_num) const {
-    std::cout << "  " << op_name << " t" << reg_num << ", ";
-    left->To_RiscV();
-    std::cout << ", ";
-    right->To_RiscV();
-}
-
-// 处理比较操作
-void BinaryIRValue::emitComparisonOp(Operation op, char reg_num,
-                                      IntegerIRValue* left_int, IntegerIRValue* right_int) const {
-    // 加载左操作数
-    if (left_int) {
-        std::cout << "  li t" << reg_num << ", " << left_int->value;
-    } else {
-        std::cout << "  mv t" << reg_num << ", ";
-        left->To_RiscV();
-    }
-    std::cout << std::endl;
-    
-    // 加载右操作数（如果是立即数）
-    if (right_int) {
-        std::cout << "  li t6, " << right_int->value << std::endl;
-    }
-    
-    // 生成比较指令
-    switch (op) {
-        case EQ:
-            // a == b  =>  xor + seqz
-            std::cout << "  xor t" << reg_num << ", t" << reg_num << ", ";
-            if (right_int) {
-                std::cout << "t6";
-            } else {
-                right->To_RiscV();
-            }
-            std::cout << std::endl;
-            std::cout << "  seqz t" << reg_num << ", t" << reg_num;
-            break;
-            
-        case NE:
-            // a != b  =>  xor + snez
-            std::cout << "  xor t" << reg_num << ", t" << reg_num << ", ";
-            if (right_int) {
-                std::cout << "t6";
-            } else {
-                right->To_RiscV();
-            }
-            std::cout << std::endl;
-            std::cout << "  snez t" << reg_num << ", t" << reg_num;
-            break;
-            
-        case LE:
-            // a <= b  =>  sgt + xori 1
-            std::cout << "  sgt t" << reg_num << ", t" << reg_num << ", ";
-            if (right_int) {
-                std::cout << "t6";
-            } else {
-                right->To_RiscV();
-            }
-            std::cout << std::endl;
-            std::cout << "  xori t" << reg_num << ", t" << reg_num << ", 1";
-            break;
-            
-        case GE:
-            // a >= b  =>  slt + xori 1
-            std::cout << "  slt t" << reg_num << ", t" << reg_num << ", ";
-            if (right_int) {
-                std::cout << "t6";
-            } else {
-                right->To_RiscV();
-            }
-            std::cout << std::endl;
-            std::cout << "  xori t" << reg_num << ", t" << reg_num << ", 1";
-            break;
-            
-        default:
             break;
     }
+    
+    // 保存结果到栈
+    std::cout << "  sw t0, " << result_offset << "(sp)";
 }
+
 
 void TemporaryIRValue::To_RiscV() const{
-    std::cout<<"t" << char(((temp_name[1] - '0') % 6) + '0');
+    // 通常不直接调用，由其他指令处理
+    // 如果需要，可以从栈加载
+    auto& stack = GenContext::current_ctx->stack;
+    int offset = stack.getOffset(temp_name);
+    std::cout << "  lw t0, " << offset << "(sp)";
 }
 
 
 
 void AllocIRValue::To_RiscV() const{
-
+    // alloc 不生成代码，空间已在 prologue 分配
 }
-
-
-
 
 
 void StoreIRValue::To_RiscV() const{
-
+    auto& stack = GenContext::current_ctx->stack;
+    int dest_offset = stack.getOffset(dest);
+    
+    // 把值加载到 t0
+    if (auto* int_val = dynamic_cast<IntegerIRValue*>(value.get())) {
+        std::cout << "  li t0, " << int_val->value << std::endl;
+    }
+    else if (auto* temp = dynamic_cast<TemporaryIRValue*>(value.get())) {
+        int src_offset = stack.getOffset(temp->temp_name);
+        std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+    }
+    
+    // 存入目标地址
+    std::cout << "  sw t0, " << dest_offset << "(sp)";
 }
 
 
-
-
-
 void LoadIRValue::To_RiscV() const{
-
+    auto& stack = GenContext::current_ctx->stack;
+    int src_offset = stack.getOffset(src);
+    int dest_offset = stack.getOffset(result_name);
+    
+    std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+    std::cout << "  sw t0, " << dest_offset << "(sp)";
 }
 
 
