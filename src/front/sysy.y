@@ -113,6 +113,10 @@ Block
     block -> blockitems = unique_ptr<BaseAST>($2);
     $$ = block;
   }
+  | '{' '}' {
+    auto block = new BlockAST();
+    $$ = block;
+  }
   ;
 
 
@@ -297,6 +301,24 @@ Stmt
   : RETURN Exp ';' {
     auto stmt = new StmtAST(StmtAST::RETURNEXP);
     stmt -> exp = unique_ptr<BaseAST>($2);
+    $$ = stmt;
+  }
+  | RETURN ';' {
+    auto stmt = new StmtAST(StmtAST::RETURNNULL);
+    $$ = stmt;
+  }
+  | Exp ';'{
+    auto stmt = new StmtAST(StmtAST::EXP);
+    stmt -> exp = unique_ptr<BaseAST>($1);
+    $$ = stmt;
+  }
+  | ';' {
+    auto stmt = new StmtAST(StmtAST::NUL);
+    $$ = stmt;
+  }
+  | Block {
+    auto stmt = new StmtAST(StmtAST::BLOCK);
+    stmt -> block = unique_ptr<BaseAST>($1);
     $$ = stmt;
   }
   | Lval '=' Exp ';'{

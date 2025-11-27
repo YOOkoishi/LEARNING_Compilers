@@ -129,7 +129,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         // return exp;
         if(auto exp = dynamic_cast<const ExpAST*>(ast->exp.get())){
             auto result = visitExp(exp);
-            auto ret_ir = std::make_unique<ReturnIRValue>();
+            auto ret_ir = std::make_unique<ReturnIRValue>(ReturnIRValue::VALUE);
             ret_ir->return_value = std::move(result);
             ctx.current_block->ADD_Value(std::move(ret_ir));
         }
@@ -167,8 +167,22 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         ctx.current_block->ADD_Value(std::move(store_ir));
         
     }
-    else{
-        std::cerr << "Error: Unknown statement type" << std::endl;
+
+    else if(ast -> type == StmtAST::BLOCK){
+        if(auto next_block = dynamic_cast<BlockAST*>(ast->block.get())){
+            visitBlock(next_block);
+        }
+    }
+
+    else if(ast -> type == StmtAST::EXP){
+        if(auto exp = dynamic_cast<ExpAST*>(ast->exp.get())){
+            visitExp(exp);
+        }
+    }
+
+    else if(ast -> type == StmtAST::RETURNNULL){
+        auto ret = std::make_unique<ReturnIRValue>(ReturnIRValue::NUL);
+        ctx.current_block->ADD_Value(std::move(ret));
     }
 }
 

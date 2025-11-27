@@ -61,11 +61,17 @@ public:
 
 class ReturnIRValue : public BaseIRValue{
 public:
+    enum Type {
+        NUL,
+        VALUE
+    } type;
+
+    ReturnIRValue() = default;
+    ReturnIRValue(Type t): type(t) {};
     std::unique_ptr<BaseIRValue> return_value;  
     void Dump() const override;
     void To_RiscV() const override;
 };
-
 
 
 

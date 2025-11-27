@@ -20,15 +20,20 @@ GenContext* GenContext::current_ctx = nullptr;
 
 
 void ReturnIRValue::Dump() const{
-    std::cout<<"  ret ";
-    if(auto result = dynamic_cast<TemporaryIRValue* >(return_value.get())){
-        result -> Dump() ;
-    }
-    else if(auto result = dynamic_cast<IntegerIRValue* >(return_value.get())){
-        result -> Dump() ;   
+    if(type == ReturnIRValue::VALUE){
+        std::cout<<"  ret ";
+        if(auto result = dynamic_cast<TemporaryIRValue* >(return_value.get())){
+            result -> Dump() ;
+        }
+        else if(auto result = dynamic_cast<IntegerIRValue* >(return_value.get())){
+            result -> Dump() ;   
+        }
+        else {
+            std::cout<<"<unknown> ";
+        }
     }
     else {
-        std::cout<<"<unknown> ";
+        std::cout<<"  ret "<<std::endl;
     }
 }
 
@@ -291,25 +296,33 @@ void IRBasicBlock::To_RiscV() const{
 
 
 void ReturnIRValue::To_RiscV() const{
-    auto& stack = GenContext::current_ctx->stack;
-    
-    if(auto int_val = dynamic_cast<IntegerIRValue*>(return_value.get())) {
-        if(int_val->value == 0) {
-            std::cout << "  mv a0, x0" << std::endl;
-        } else {
-            std::cout << "  li a0, " << int_val->value << std::endl;
+    if(type == ReturnIRValue::VALUE){
+        
+        auto& stack = GenContext::current_ctx->stack;
+        
+        if(auto int_val = dynamic_cast<IntegerIRValue*>(return_value.get())) {
+            if(int_val->value == 0) {
+                std::cout << "  mv a0, x0" << std::endl;
+            } else {
+                std::cout << "  li a0, " << int_val->value << std::endl;
+            }
+        } else if(auto temp = dynamic_cast<TemporaryIRValue*>(return_value.get())) {
+            int offset = stack.getOffset(temp->temp_name);
+            std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
         }
-    } else if(auto temp = dynamic_cast<TemporaryIRValue*>(return_value.get())) {
-        int offset = stack.getOffset(temp->temp_name);
-        std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
+        
+        // epilogue
+        int frame_size = stack.getAlignedSize();
+        if (frame_size > 0) {
+            std::cout << "  addi sp, sp, " << frame_size << std::endl;
+        }
+        std::cout << "  ret";
+
+    }
+    else {
+        std::cout << "  ret"<<std::endl;
     }
     
-    // epilogue
-    int frame_size = stack.getAlignedSize();
-    if (frame_size > 0) {
-        std::cout << "  addi sp, sp, " << frame_size << std::endl;
-    }
-    std::cout << "  ret";
 }
 
 

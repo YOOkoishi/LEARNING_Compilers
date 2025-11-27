@@ -75,13 +75,18 @@ class StmtAST : public BaseAST {
 public:
     enum Type {
         RETURNEXP,
-        LVALEXP
+        LVALEXP,
+        RETURNNULL,
+        EXP,
+        NUL,
+        BLOCK
     }type;
 
     StmtAST(Type t) : type(t){};
     StmtAST(){};    
     std::unique_ptr<BaseAST> lval;
     std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> block;
     void Dump() const override;
 };
 
