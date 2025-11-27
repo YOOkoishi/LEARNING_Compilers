@@ -54,10 +54,10 @@
 
 对于 5.1
 
-- [ ] ast
-- [ ] bison
-- [ ] 符号表
-- [ ] IR Generator (关于 常量的生成， 新的IR value的定义 ...)
+- [x] ast
+- [x] bison  (new stmt)
+- [x] 符号表
+- [x] IR Generator
 - [ ] Koopa IR output
 - [ ] To_RiscV
 
