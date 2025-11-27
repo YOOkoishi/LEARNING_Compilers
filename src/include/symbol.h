@@ -18,38 +18,42 @@ enum class DataType {
 
 class Symbol {
 public:
-    std::string name;
+    std::string name;       // 源码中的名字
+    std::string ir_name;    // IR 中的唯一名字
     SymbolType type;
     DataType datatype;
     int scope_level;
     int const_value;
     
-    Symbol(const std::string& n, SymbolType t, DataType dt, int lvl, int val = 0)
-        : name(n), type(t), datatype(dt), scope_level(lvl), const_value(val) {}
+    Symbol() = default;
+    Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, int val = 0)
+        : name(n), ir_name(ir), type(t), datatype(dt), scope_level(lvl), const_value(val) {}
 };
 
 
 class SymbolTable {
 public:
-    // ✅ 作用域栈：每个 map 是一个作用域
+    // 作用域栈：每个 map 是一个作用域
     std::vector<std::map<std::string, std::shared_ptr<Symbol>>> symbol_table;
     
 private:
     int current_scope_level = 0;
+    // 用于生成唯一 IR 名称
+    std::map<std::string, int> name_counter;
     
 public:
     SymbolTable() {
-        // ✅ 初始化全局作用域
+        // 初始化全局作用域
         enterScope();
     }
     
-    // ✅ 进入新作用域
+    // 进入新作用域
     void enterScope() {
         symbol_table.push_back(std::map<std::string, std::shared_ptr<Symbol>>());
         current_scope_level++;
     }
     
-    // ✅ 离开作用域
+    // 离开作用域
     void exitScope() {
         if (symbol_table.size() > 1) {
             symbol_table.pop_back();
@@ -57,8 +61,17 @@ public:
         }
     }
     
-    // ✅ 声明符号（插入当前作用域）
-    bool declare(const std::string& name, SymbolType type, DataType datatype, int value = 0) {
+    // 生成唯一的 IR 名称
+    std::string generateIRName(const std::string& name) {
+        int count = name_counter[name]++;
+        if (count == 0) {
+            return "@" + name;
+        }
+        return "@" + name + "_" + std::to_string(count);
+    }
+    
+    // 声明符号（插入当前作用域），返回生成的 IR 名称
+    std::string declare(const std::string& name, SymbolType type, DataType datatype, int value = 0) {
         auto& current_scope = symbol_table.back();
         
         // 检查当前作用域是否已存在
@@ -66,12 +79,13 @@ public:
             throw std::runtime_error("Error: Redeclaration of '" + name + "'");
         }
         
-        auto symbol = std::make_shared<Symbol>(name, type, datatype, current_scope_level, value);
+        std::string ir_name = generateIRName(name);
+        auto symbol = std::make_shared<Symbol>(name, ir_name, type, datatype, current_scope_level, value);
         current_scope[name] = symbol;
-        return true;
+        return ir_name;
     }
     
-    // ✅ 查询符号（从内到外查找）
+    // 查询符号（从内到外查找）
     std::shared_ptr<Symbol> lookup(const std::string& name) {
         // 从最内层作用域向外查找
         for (int i = symbol_table.size() - 1; i >= 0; i--) {
@@ -83,13 +97,13 @@ public:
         return nullptr;  // 未找到
     }
     
-    // ✅ 调试：打印符号表
+    // 调试：打印符号表
     void print() const {
         std::cout << "=== Symbol Table ===" << std::endl;
         for (size_t i = 0; i < symbol_table.size(); i++) {
             std::cout << "Scope " << i << ":" << std::endl;
             for (const auto& [name, symbol] : symbol_table[i]) {
-                std::cout << "  " << name;
+                std::cout << "  " << name << " -> " << symbol->ir_name;
                 std::cout << " (" << (symbol->type == SymbolType::CONST ? "const" : "var");
                 std::cout << " int";
                 if (symbol->type == SymbolType::CONST) {

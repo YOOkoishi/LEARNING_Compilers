@@ -161,9 +161,8 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         // 3. 计算右侧表达式的值
         auto rhs_value = visitExp(exp);
         
-        // 4. 生成 store 指令
-        std::string var_name = "@" + lval->ident;
-        auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), var_name);
+        // 4. 生成 store 指令，使用 symbol->ir_name
+        auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), symbol->ir_name);
         ctx.current_block->ADD_Value(std::move(store_ir));
         
     }
@@ -293,12 +292,12 @@ void IRGenerator::visitVarDefs(const VarDefsAST* ast){
 void IRGenerator::visitVarDef(const VarDefAST* ast){
     if(!ast) return;
 
-    std::string var_name = "@" + ast->ident ; 
+    std::string var_name;
 
     if(ast ->type == VarDefAST::IDENT){
         try
         {
-            ctx.symbol_table->declare(
+            var_name = ctx.symbol_table->declare(
                 ast->ident,
                 SymbolType::VAR,
                 DataType::INT
@@ -317,7 +316,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
     else if(ast ->type == VarDefAST::IDENTDEF){
         try
         {
-            ctx.symbol_table->declare(
+            var_name = ctx.symbol_table->declare(
                 ast->ident,
                 SymbolType::VAR,
                 DataType::INT
@@ -766,12 +765,11 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
                 return value;
             }
             else if(symbol -> type == SymbolType::VAR){
-                std::string var_name = "@" + lval -> ident;
                 std::string temp_name = generate_temp_name();
 
                 auto load = std::make_unique<LoadIRValue>();
                 load ->result_name = temp_name;
-                load ->src = var_name;
+                load ->src = symbol->ir_name;  // 使用 symbol->ir_name
                 ctx.current_block->ADD_Value(std::move(load));
 
                 auto temp = std::make_unique<TemporaryIRValue>();
