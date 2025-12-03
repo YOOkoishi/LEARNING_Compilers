@@ -183,6 +183,14 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         auto ret = std::make_unique<ReturnIRValue>(ReturnIRValue::NUL);
         ctx.current_block->ADD_Value(std::move(ret));
     }
+
+    else if(ast -> type == StmtAST::IF){
+        
+    }
+
+    else if(ast -> type == StmtAST::IFELSE){
+
+    }
 }
 
 

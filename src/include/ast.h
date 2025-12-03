@@ -79,11 +79,15 @@ public:
         RETURNNULL,
         EXP,
         NUL,
-        BLOCK
+        BLOCK,
+        IF,
+        IFELSE
     }type;
 
     StmtAST(Type t) : type(t){};
-    StmtAST(){};    
+    StmtAST(){};
+    std::unique_ptr<BaseAST> if_stmt;    
+    std::unique_ptr<BaseAST> else_stmt;
     std::unique_ptr<BaseAST> lval;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> block;

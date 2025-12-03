@@ -56,7 +56,7 @@ using namespace std;
 
 %token LE GE EQ NE LT GT  '='
 %token LOR LAND
-
+%token IF ELSE
 
 %left '='
 %left LOR
@@ -327,6 +327,19 @@ Stmt
     stmt -> exp = unique_ptr<BaseAST>($3);
     $$ = stmt;
   }
+  | IF '(' Exp ')' Stmt {
+    auto stmt = new StmtAST(StmtAST::IF);
+    stmt -> exp = unique_ptr<BaseAST>($3);
+    stmt -> if_stmt = unique_ptr<BaseAST>($5);
+    $$ = stmt;
+  }
+  | IF '(' Exp ')' Stmt ELSE Stmt{
+    auto stmt = new StmtAST(BaseAST)($3);
+    stmt -> exp = unique_ptr<BaseAST>($3);
+    stmt -> if_stmt = unique_ptr<BaseAST>($5);
+    stmt -> else_stmt = unique_ptr<BaseAST>($7);
+    $$ = stmt;
+  } 
   ;
 
 
