@@ -334,7 +334,7 @@ Stmt
     $$ = stmt;
   }
   | IF '(' Exp ')' Stmt ELSE Stmt{
-    auto stmt = new StmtAST(BaseAST)($3);
+    auto stmt = new StmtAST(StmtAST::IFELSE);
     stmt -> exp = unique_ptr<BaseAST>($3);
     stmt -> if_stmt = unique_ptr<BaseAST>($5);
     stmt -> else_stmt = unique_ptr<BaseAST>($7);

@@ -135,10 +135,29 @@ public:
 
 class JumpIRValue : public BaseIRValue{
 public:
-    std::string 
+    std::string target_label;
+    
+    JumpIRValue(const std::string& target) : target_label(target) {}
+    JumpIRValue() = default;
 
-}
+    void Dump() const override;
+    void To_RiscV() const override;
+};   
 
+
+class BranchIRValue : public BaseIRValue{
+public:
+    std::unique_ptr<BaseIRValue> condition;
+    std::string true_label;
+    std::string false_label;
+
+    BranchIRValue(std::unique_ptr<BaseIRValue> cond, const std::string& t_label, const std::string& f_label)
+        : condition(std::move(cond)), true_label(t_label), false_label(f_label) {}
+    BranchIRValue() = default;
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
 
 
 

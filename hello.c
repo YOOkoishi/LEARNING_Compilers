@@ -1,5 +1,8 @@
 int main() {
-  int x = 10;
-  x = x + 1;
-  return x;
+  int a = 1;
+  if (a == 2 || a == 3) {
+    return 0;
+  } else {
+    return a + 1;
+  }
 }

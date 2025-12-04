@@ -185,11 +185,89 @@ void IRGenerator::visitStmt(const StmtAST* ast){
     }
 
     else if(ast -> type == StmtAST::IF){
+        // if (cond) stmt
         
+        // 1. Create blocks
+        auto then_block = std::make_unique<IRBasicBlock>();
+        then_block->block_name = "%then" + std::to_string(blockcount++);
+        std::string then_label = then_block->block_name;
+
+        auto end_block = std::make_unique<IRBasicBlock>();
+        end_block->block_name = "%end" + std::to_string(blockcount++);
+        std::string end_label = end_block->block_name;
+
+        // 2. Evaluate condition
+        auto cond = visitExp(dynamic_cast<ExpAST*>(ast->exp.get()));
+        
+        // 3. Branch
+        auto br = std::make_unique<BranchIRValue>(std::move(cond), then_label, end_label);
+        ctx.current_block->ADD_Value(std::move(br));
+
+        // 4. Visit Then Block
+        auto current_func = ctx.program->ir_function.back().get();
+        current_func->ADD_Block(std::move(then_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+        
+        if(auto stmt = dynamic_cast<StmtAST*>(ast->if_stmt.get())){
+            visitStmt(stmt);
+        }
+        
+        auto jump_end = std::make_unique<JumpIRValue>(end_label);
+        ctx.current_block->ADD_Value(std::move(jump_end));
+
+        // 5. Visit End Block
+        current_func->ADD_Block(std::move(end_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
     }
 
     else if(ast -> type == StmtAST::IFELSE){
+        // if (cond) stmt else elsestmt
 
+        // 1. Create blocks
+        auto then_block = std::make_unique<IRBasicBlock>();
+        then_block->block_name = "%then" + std::to_string(blockcount++);
+        std::string then_label = then_block->block_name;
+
+        auto else_block = std::make_unique<IRBasicBlock>();
+        else_block->block_name = "%else" + std::to_string(blockcount++);
+        std::string else_label = else_block->block_name;
+
+        auto end_block = std::make_unique<IRBasicBlock>();
+        end_block->block_name = "%end" + std::to_string(blockcount++);
+        std::string end_label = end_block->block_name;
+
+        // 2. Evaluate condition
+        auto cond = visitExp(dynamic_cast<ExpAST*>(ast->exp.get()));
+
+        // 3. Branch
+        auto br = std::make_unique<BranchIRValue>(std::move(cond), then_label, else_label);
+        ctx.current_block->ADD_Value(std::move(br));
+
+        auto current_func = ctx.program->ir_function.back().get();
+
+        // 4. Visit Then Block
+        current_func->ADD_Block(std::move(then_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+        
+        if(auto stmt = dynamic_cast<StmtAST*>(ast->if_stmt.get())){
+            visitStmt(stmt);
+        }
+        auto jump_end_1 = std::make_unique<JumpIRValue>(end_label);
+        ctx.current_block->ADD_Value(std::move(jump_end_1));
+
+        // 5. Visit Else Block
+        current_func->ADD_Block(std::move(else_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+
+        if(auto stmt = dynamic_cast<StmtAST*>(ast->else_stmt.get())){
+            visitStmt(stmt);
+        }
+        auto jump_end_2 = std::make_unique<JumpIRValue>(end_label);
+        ctx.current_block->ADD_Value(std::move(jump_end_2));
+
+        // 6. Visit End Block
+        current_func->ADD_Block(std::move(end_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
     }
 }
 

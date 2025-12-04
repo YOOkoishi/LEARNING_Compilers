@@ -71,112 +71,112 @@ void BinaryIRValue::Dump() const{
     std::string operation_name;
     switch (operation)
     {
-    case ADD:
+        case ADD:
         std::cout<<"  "<<result_name << " = " << "add " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;  
-             
-    case SUB:
+        
+        case SUB:
         std::cout<<"  "<<result_name << " = " << "sub " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-    
-    case EQ:
+        
+        case EQ:
         std::cout<<"  "<<result_name << " = " << "eq " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-    
-    case MUL:
+        
+        case MUL:
         std::cout<<"  "<<result_name << " = " << "mul " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
- 
-    case DIV:
+        
+        case DIV:
         std::cout<<"  "<<result_name << " = " << "div " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-
-    case MOD:
+        
+        case MOD:
         std::cout<<"  "<<result_name << " = " << "mod " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-    
-    case NE:
+        
+        case NE:
         std::cout<<"  "<<result_name << " = " << "ne " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-    
-    case LT:
+        
+        case LT:
         std::cout<<"  "<<result_name << " = " << "lt " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-    
-    case GT:
+        
+        case GT:
         std::cout<<"  "<<result_name << " = " << "gt " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-           
-    case GE:
+        
+        case GE:
         std::cout<<"  "<<result_name << " = " << "ge " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-           
-    case LE:
+        
+        case LE:
         std::cout<<"  "<<result_name << " = " << "le " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-           
-    case AND:
+        
+        case AND:
         std::cout<<"  "<<result_name << " = " << "and " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-           
-    case OR:
+        
+        case OR:
         std::cout<<"  "<<result_name << " = " << "or " ; 
         left->Dump();
         std::cout<<", ";
         right->Dump(); 
         std::cout<< std::endl;
         break;
-                
-
-    default:
+        
+        
+        default:
         break;
     }
 }
@@ -185,6 +185,16 @@ void TemporaryIRValue ::Dump() const{
     std::cout<< temp_name;
 }
 
+
+void JumpIRValue::Dump() const {
+    std::cout << "  jump " << target_label << std::endl;
+}
+
+void BranchIRValue::Dump() const {
+    std::cout << "  br ";
+    if (condition) condition->Dump();
+    std::cout << ", " << true_label << ", " << false_label << std::endl;
+}
 
 
 void IRBasicBlock::DumpValue() const{
@@ -429,6 +439,37 @@ void LoadIRValue::To_RiscV() const{
     
     std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
     std::cout << "  sw t0, " << dest_offset << "(sp)";
+}
+
+
+void JumpIRValue::To_RiscV() const {
+    std::string label = target_label;
+    if (label.length() > 0 && label[0] == '%') {
+        label = label.substr(1);
+    }
+    std::cout << "  j " << label << std::endl;
+}
+
+
+
+void BranchIRValue::To_RiscV() const {
+    auto& stack = GenContext::current_ctx->stack;
+    
+    if (auto* int_val = dynamic_cast<IntegerIRValue*>(condition.get())) {
+        std::cout << "  li t0, " << int_val->value << std::endl;
+    } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(condition.get())) {
+        int offset = stack.getOffset(temp->temp_name);
+        std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+    }
+    
+    std::string t_label = true_label;
+    if (t_label.length() > 0 && t_label[0] == '%') t_label = t_label.substr(1);
+    
+    std::string f_label = false_label;
+    if (f_label.length() > 0 && f_label[0] == '%') f_label = f_label.substr(1);
+
+    std::cout << "  bnez t0, " << t_label << std::endl;
+    std::cout << "  j " << f_label << std::endl;
 }
 
 
