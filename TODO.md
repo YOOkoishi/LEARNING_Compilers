@@ -76,3 +76,13 @@
 
 做过了
 
+对于 7.1
+
+
+- [ ] ast
+- [ ] bison  (new stmt)
+- [ ] 符号表
+- [ ] ir generator
+- [ ] koopa ir output
+- [ ] to_riscv
+
