@@ -58,8 +58,6 @@
 - [x] bison  (new stmt)
 - [x] 符号表
 - [x] ir generator
-- [ ] koopa ir output
-- [ ] to_riscv
 
 ✅
 
@@ -81,10 +79,7 @@
 
 - [x] ast
 - [x] bison  (new stmt)
-- [ ] 符号表
-- [ ] ir generator
-- [ ] koopa ir output
-- [ ] to_riscv
+- [x] ir generator
 
 仿照 if 去做即可
 
@@ -92,8 +87,14 @@
 
 - [x] ast
 - [x] bison  (new stmt)
+- [x] 符号表
+- [x] ir generator
+
+对于 8.1
+
+- [ ] ast
+- [ ] bison  (new stmt)
 - [ ] 符号表
 - [ ] ir generator
 - [ ] koopa ir output
 - [ ] to_riscv
-
