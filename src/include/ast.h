@@ -82,7 +82,9 @@ public:
         BLOCK,
         IF,
         IFELSE,
-        WHILE
+        WHILE,
+        BREAK,
+        CONTINUE
     }type;
 
     StmtAST(Type t) : type(t){};

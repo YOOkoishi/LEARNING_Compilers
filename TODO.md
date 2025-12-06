@@ -79,8 +79,19 @@
 对于 7.1
 
 
-- [ ] ast
-- [ ] bison  (new stmt)
+- [x] ast
+- [x] bison  (new stmt)
+- [ ] 符号表
+- [ ] ir generator
+- [ ] koopa ir output
+- [ ] to_riscv
+
+仿照 if 去做即可
+
+对于 7.2
+
+- [x] ast
+- [x] bison  (new stmt)
 - [ ] 符号表
 - [ ] ir generator
 - [ ] koopa ir output

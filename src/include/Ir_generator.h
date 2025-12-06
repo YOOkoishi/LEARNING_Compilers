@@ -43,7 +43,10 @@ public:
 };
 
 
-
+struct LoopInfo {
+    std::string entry_label;
+    std::string end_label;
+};
 
 
 struct GenContext
@@ -52,6 +55,7 @@ struct GenContext
     SymbolTable* symbol_table = nullptr;
     IRProgram* program = nullptr;
     StackFrameManager stack;
+    std::vector<LoopInfo> loop_stack;
 
     static GenContext* current_ctx;
 };
@@ -112,6 +116,5 @@ public:
     IRBasicBlock* getCurrentBlock() const {
         return ctx.current_block;
     }
-
 
 };

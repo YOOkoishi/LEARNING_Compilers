@@ -56,7 +56,8 @@ using namespace std;
 
 %token LE GE EQ NE LT GT  '='
 %token LOR LAND
-%token IF ELSE WHILE
+%token IF ELSE WHILE BREAK CONTINUE 
+
 
 %left '='
 %left LOR
@@ -344,6 +345,14 @@ Stmt
     auto stmt = new StmtAST(StmtAST::WHILE);
     stmt -> exp = unique_ptr<BaseAST>($3);
     stmt -> while_stmt = unique_ptr<BaseAST>($5);
+    $$ = stmt;
+  }
+  | BREAK ';' {
+    auto stmt = new StmtAST(StmtAST::BREAK);
+    $$ = stmt;
+  }
+  | CONTINUE ';' {
+    auto stmt = new StmtAST(StmtAST::CONTINUE);
     $$ = stmt;
   }
   ;

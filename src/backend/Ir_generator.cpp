@@ -334,7 +334,8 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         auto end_block = std::make_unique<IRBasicBlock>();
         end_block -> block_name = "%end" + std::to_string(blockcount++);
         std::string end_label = end_block -> block_name;
-               
+              
+        ctx.loop_stack.push_back({while_entry_label,end_label});
         //second step: jump        
 
         auto jump_while_entry = std::make_unique<JumpIRValue>(while_entry_label);
@@ -378,6 +379,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
             ctx.current_block ->ADD_Value(std::move(jump_while_entry2));
         }
 
+        ctx.loop_stack.pop_back();
         //fifth step: go end
 
         current_func->ADD_Block(std::move(end_block));
@@ -385,6 +387,30 @@ void IRGenerator::visitStmt(const StmtAST* ast){
     }
 
 
+    else if(ast-> type == StmtAST::BREAK){
+        if(ctx.loop_stack.empty()){
+            std::cerr << "Error : break statement not within loop" << std::endl;
+            return;
+        }
+
+        std::string target = ctx.loop_stack.back().end_label;
+
+        auto jump = std::make_unique<JumpIRValue>(target);
+        ctx.current_block->ADD_Value(std::move(jump));
+
+    }
+    else if(ast->type == StmtAST::CONTINUE){
+         if(ctx.loop_stack.empty()){
+            std::cerr << "Error : continue statement not within loop" << std::endl;
+            return;
+        }
+
+        std::string target = ctx.loop_stack.back().entry_label;
+
+        auto jump = std::make_unique<JumpIRValue>(target);
+        ctx.current_block->ADD_Value(std::move(jump));
+        
+    }
 }
 
 
