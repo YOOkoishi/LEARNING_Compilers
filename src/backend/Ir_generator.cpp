@@ -84,6 +84,16 @@ void IRGenerator::visitBlockItems(const BlockItemsAST* ast){
     if(!ast) return;
 
     for(const auto& item : ast->item){
+        // Check if current block is terminated (dead code elimination)
+        if (ctx.current_block && !ctx.current_block->ir_value.empty()) {
+            auto last_inst = ctx.current_block->ir_value.back().get();
+            if (dynamic_cast<ReturnIRValue*>(last_inst) ||
+                dynamic_cast<JumpIRValue*>(last_inst) ||
+                dynamic_cast<BranchIRValue*>(last_inst)) {
+                continue; // Skip unreachable code
+            }
+        }
+
         if(auto blockitem = dynamic_cast<BlockItemAST*>(item.get())){
             visitBlockItem(blockitem);
         }
@@ -212,8 +222,21 @@ void IRGenerator::visitStmt(const StmtAST* ast){
             visitStmt(stmt);
         }
         
-        auto jump_end = std::make_unique<JumpIRValue>(end_label);
-        ctx.current_block->ADD_Value(std::move(jump_end));
+        // ✅ 安全检查：检查是否需要跳转
+        bool need_jump = true;
+        if (!ctx.current_block->ir_value.empty()) {
+            auto last_value = ctx.current_block->ir_value.back().get();
+            if (dynamic_cast<ReturnIRValue*>(last_value) || 
+                dynamic_cast<JumpIRValue*>(last_value) || 
+                dynamic_cast<BranchIRValue*>(last_value)) {
+                need_jump = false;
+            }
+        }
+        
+        if(need_jump){
+            auto jump_end = std::make_unique<JumpIRValue>(end_label);
+            ctx.current_block->ADD_Value(std::move(jump_end));
+        }
 
         // 5. Visit End Block
         current_func->ADD_Block(std::move(end_block));
@@ -252,8 +275,22 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         if(auto stmt = dynamic_cast<StmtAST*>(ast->if_stmt.get())){
             visitStmt(stmt);
         }
-        auto jump_end_1 = std::make_unique<JumpIRValue>(end_label);
-        ctx.current_block->ADD_Value(std::move(jump_end_1));
+        
+        // ✅ 安全检查 Then 块
+        bool need_jump_if = true;
+        if (!ctx.current_block->ir_value.empty()) {
+            auto last_value = ctx.current_block->ir_value.back().get();
+            if (dynamic_cast<ReturnIRValue*>(last_value) || 
+                dynamic_cast<JumpIRValue*>(last_value) || 
+                dynamic_cast<BranchIRValue*>(last_value)) {
+                need_jump_if = false;
+            }
+        }
+
+        if(need_jump_if){
+            auto jump_end_1 = std::make_unique<JumpIRValue>(end_label);
+            ctx.current_block->ADD_Value(std::move(jump_end_1));
+        }
 
         // 5. Visit Else Block
         current_func->ADD_Block(std::move(else_block));
@@ -262,8 +299,22 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         if(auto stmt = dynamic_cast<StmtAST*>(ast->else_stmt.get())){
             visitStmt(stmt);
         }
-        auto jump_end_2 = std::make_unique<JumpIRValue>(end_label);
-        ctx.current_block->ADD_Value(std::move(jump_end_2));
+         
+        // ✅ 安全检查 Else 块
+        bool need_jump_else = true;
+        if (!ctx.current_block->ir_value.empty()) {
+            auto last_value = ctx.current_block->ir_value.back().get();
+            if (dynamic_cast<ReturnIRValue*>(last_value) || 
+                dynamic_cast<JumpIRValue*>(last_value) || 
+                dynamic_cast<BranchIRValue*>(last_value)) {
+                need_jump_else = false;
+            }
+        }
+
+        if(need_jump_else){
+            auto jump_end_2 = std::make_unique<JumpIRValue>(end_label);
+            ctx.current_block->ADD_Value(std::move(jump_end_2));
+        }
 
         // 6. Visit End Block
         current_func->ADD_Block(std::move(end_block));

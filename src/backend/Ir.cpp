@@ -31,6 +31,7 @@ void ReturnIRValue::Dump() const{
         else {
             std::cout<<"<unknown> ";
         }
+        std::cout<<std::endl;
     }
     else {
         std::cout<<"  ret "<<std::endl;
@@ -198,7 +199,7 @@ void BranchIRValue::Dump() const {
 
 
 void IRBasicBlock::DumpValue() const{
-    std::cout << block_name << " :" << std::endl;
+    std::cout << "\n" << block_name << ":" << std::endl;
     for(const auto &val : ir_value){
         val -> Dump();
     }    
@@ -298,6 +299,13 @@ void IRFunction::To_RiscV() const{
 
 
 void IRBasicBlock::To_RiscV() const{
+    std::string label = block_name;
+    if (label.length() > 0 && label[0] == '%') {
+        label = label.substr(1);
+    }
+    // 使用 .L 前缀避免与函数名冲突
+    std::cout << ".L" << label << ":" << std::endl;
+
     for(const auto &val : ir_value){
         val ->To_RiscV();
         std::cout<<std::endl;
@@ -447,7 +455,7 @@ void JumpIRValue::To_RiscV() const {
     if (label.length() > 0 && label[0] == '%') {
         label = label.substr(1);
     }
-    std::cout << "  j " << label << std::endl;
+    std::cout << "  j .L" << label << std::endl;
 }
 
 
@@ -468,8 +476,8 @@ void BranchIRValue::To_RiscV() const {
     std::string f_label = false_label;
     if (f_label.length() > 0 && f_label[0] == '%') f_label = f_label.substr(1);
 
-    std::cout << "  bnez t0, " << t_label << std::endl;
-    std::cout << "  j " << f_label << std::endl;
+    std::cout << "  bnez t0, .L" << t_label << std::endl;
+    std::cout << "  j .L" << f_label << std::endl;
 }
 
 
