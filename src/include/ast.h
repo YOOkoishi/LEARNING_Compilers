@@ -81,13 +81,15 @@ public:
         NUL,
         BLOCK,
         IF,
-        IFELSE
+        IFELSE,
+        WHILE
     }type;
 
     StmtAST(Type t) : type(t){};
     StmtAST(){};
     std::unique_ptr<BaseAST> if_stmt;    
     std::unique_ptr<BaseAST> else_stmt;
+    std::unique_ptr<BaseAST> while_stmt;
     std::unique_ptr<BaseAST> lval;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> block;

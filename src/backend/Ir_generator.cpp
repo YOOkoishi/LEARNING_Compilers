@@ -320,6 +320,71 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         current_func->ADD_Block(std::move(end_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
     }
+    else if(ast -> type == StmtAST::WHILE){
+        
+        //first step : make block
+        auto while_entry_block = std::make_unique<IRBasicBlock>();
+        while_entry_block ->block_name = "%while_entry" + std::to_string(blockcount++);
+        std::string while_entry_label = while_entry_block ->block_name ;
+
+        auto while_body_block = std::make_unique<IRBasicBlock>();
+        while_body_block -> block_name = "%while_body" + std::to_string(blockcount++);
+        std::string while_body_label = while_body_block -> block_name;
+ 
+        auto end_block = std::make_unique<IRBasicBlock>();
+        end_block -> block_name = "%end" + std::to_string(blockcount++);
+        std::string end_label = end_block -> block_name;
+               
+        //second step: jump        
+
+        auto jump_while_entry = std::make_unique<JumpIRValue>(while_entry_label);
+        ctx.current_block ->ADD_Value(std::move(jump_while_entry));
+        
+        auto current_func = ctx.program -> ir_function.back().get();
+        
+        current_func ->ADD_Block(std::move(while_entry_block));
+        
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+        
+        //third step: let's go while entry block
+        auto cond = visitExp(dynamic_cast<ExpAST*>(ast->exp.get()));
+    
+        auto br = std::make_unique<BranchIRValue>(std::move(cond), while_body_label , end_label);    
+        ctx.current_block ->ADD_Value(std::move(br));
+
+        
+        //fourth step: go while body block 
+        
+        current_func ->ADD_Block(std::move(while_body_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+        
+        if(auto stmt = dynamic_cast<StmtAST*>(ast->while_stmt.get())){
+            visitStmt(stmt);
+        }
+        
+        bool need_jump_while = true;
+
+        if(!ctx.current_block->ir_value.empty()){
+            auto last_value = ctx.current_block -> ir_value.back().get();
+            if(dynamic_cast<ReturnIRValue*>(last_value) ||
+            dynamic_cast<JumpIRValue*>(last_value)||
+            dynamic_cast<BranchIRValue*>(last_value)) {
+                need_jump_while = false;
+            }
+        }
+
+        if(need_jump_while){
+            auto jump_while_entry2 = std::make_unique<JumpIRValue>(while_entry_label);
+            ctx.current_block ->ADD_Value(std::move(jump_while_entry2));
+        }
+
+        //fifth step: go end
+
+        current_func->ADD_Block(std::move(end_block));
+        setCurrentBlock(current_func->ir_basicblock.back().get());
+    }
+
+
 }
 
 

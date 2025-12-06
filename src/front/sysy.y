@@ -56,7 +56,7 @@ using namespace std;
 
 %token LE GE EQ NE LT GT  '='
 %token LOR LAND
-%token IF ELSE
+%token IF ELSE WHILE
 
 %left '='
 %left LOR
@@ -340,6 +340,12 @@ Stmt
     stmt -> else_stmt = unique_ptr<BaseAST>($7);
     $$ = stmt;
   } 
+  | WHILE '(' Exp ')' Stmt {
+    auto stmt = new StmtAST(StmtAST::WHILE);
+    stmt -> exp = unique_ptr<BaseAST>($3);
+    stmt -> while_stmt = unique_ptr<BaseAST>($5);
+    $$ = stmt;
+  }
   ;
 
 

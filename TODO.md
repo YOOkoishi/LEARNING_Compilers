@@ -68,9 +68,9 @@
 - [x] ast
 - [x] bison  (new stmt)
 - [x] 符号表
-- [ ] ir generator
-- [ ] koopa ir output
-- [ ] to_riscv
+- [x] ir generator
+- [x] koopa ir output
+- [x] to_riscv
 
 对于 6.2
 
