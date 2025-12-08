@@ -33,18 +33,18 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
     if (ast -> fun_type){
         if (auto fun_type = dynamic_cast<const FunTypeAST*>(ast ->fun_type.get())){
             visitFunType(fun_type);
-            ir_fun ->functype = ((fun_type ->tp) == "int")? "i32":"other";
+            ir_fun ->functype = ((fun_type ->type) == "int")? "i32":"other";
         }
     }
 
-    program ->ADD_Function(std::move(ir_fun));
+    program ->addFunction(std::move(ir_fun));
 
     IRFunction* current_func = program->ir_function.back().get();
 
     auto entry_block = std::make_unique<IRBasicBlock>();
     entry_block->block_name = "%entry" + std::to_string(blockcount++);
     
-    current_func ->ADD_Block(std::move(entry_block));
+    current_func ->addBlock(std::move(entry_block));
     
     IRBasicBlock* current_block = current_func ->ir_basicblock.back().get();
     
@@ -141,7 +141,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
             auto result = visitExp(exp);
             auto ret_ir = std::make_unique<ReturnIRValue>(ReturnIRValue::VALUE);
             ret_ir->return_value = std::move(result);
-            ctx.current_block->ADD_Value(std::move(ret_ir));
+            ctx.current_block->addValue(std::move(ret_ir));
         }
     }
     
@@ -173,7 +173,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         
         // 4. 生成 store 指令，使用 symbol->ir_name
         auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), symbol->ir_name);
-        ctx.current_block->ADD_Value(std::move(store_ir));
+        ctx.current_block->addValue(std::move(store_ir));
         
     }
 
@@ -191,7 +191,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
     else if(ast -> type == StmtAST::RETURNNULL){
         auto ret = std::make_unique<ReturnIRValue>(ReturnIRValue::NUL);
-        ctx.current_block->ADD_Value(std::move(ret));
+        ctx.current_block->addValue(std::move(ret));
     }
 
     else if(ast -> type == StmtAST::IF){
@@ -211,11 +211,11 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         
         // 3. Branch
         auto br = std::make_unique<BranchIRValue>(std::move(cond), then_label, end_label);
-        ctx.current_block->ADD_Value(std::move(br));
+        ctx.current_block->addValue(std::move(br));
 
         // 4. Visit Then Block
         auto current_func = ctx.program->ir_function.back().get();
-        current_func->ADD_Block(std::move(then_block));
+        current_func->addBlock(std::move(then_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
         
         if(auto stmt = dynamic_cast<StmtAST*>(ast->if_stmt.get())){
@@ -235,11 +235,11 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         
         if(need_jump){
             auto jump_end = std::make_unique<JumpIRValue>(end_label);
-            ctx.current_block->ADD_Value(std::move(jump_end));
+            ctx.current_block->addValue(std::move(jump_end));
         }
 
         // 5. Visit End Block
-        current_func->ADD_Block(std::move(end_block));
+        current_func->addBlock(std::move(end_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
     }
 
@@ -264,12 +264,12 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
         // 3. Branch
         auto br = std::make_unique<BranchIRValue>(std::move(cond), then_label, else_label);
-        ctx.current_block->ADD_Value(std::move(br));
+        ctx.current_block->addValue(std::move(br));
 
         auto current_func = ctx.program->ir_function.back().get();
 
         // 4. Visit Then Block
-        current_func->ADD_Block(std::move(then_block));
+        current_func->addBlock(std::move(then_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
         
         if(auto stmt = dynamic_cast<StmtAST*>(ast->if_stmt.get())){
@@ -289,11 +289,11 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
         if(need_jump_if){
             auto jump_end_1 = std::make_unique<JumpIRValue>(end_label);
-            ctx.current_block->ADD_Value(std::move(jump_end_1));
+            ctx.current_block->addValue(std::move(jump_end_1));
         }
 
         // 5. Visit Else Block
-        current_func->ADD_Block(std::move(else_block));
+        current_func->addBlock(std::move(else_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
 
         if(auto stmt = dynamic_cast<StmtAST*>(ast->else_stmt.get())){
@@ -313,11 +313,11 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
         if(need_jump_else){
             auto jump_end_2 = std::make_unique<JumpIRValue>(end_label);
-            ctx.current_block->ADD_Value(std::move(jump_end_2));
+            ctx.current_block->addValue(std::move(jump_end_2));
         }
 
         // 6. Visit End Block
-        current_func->ADD_Block(std::move(end_block));
+        current_func->addBlock(std::move(end_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
     }
     else if(ast -> type == StmtAST::WHILE){
@@ -339,11 +339,11 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         //second step: jump        
 
         auto jump_while_entry = std::make_unique<JumpIRValue>(while_entry_label);
-        ctx.current_block ->ADD_Value(std::move(jump_while_entry));
+        ctx.current_block ->addValue(std::move(jump_while_entry));
         
         auto current_func = ctx.program -> ir_function.back().get();
         
-        current_func ->ADD_Block(std::move(while_entry_block));
+        current_func ->addBlock(std::move(while_entry_block));
         
         setCurrentBlock(current_func->ir_basicblock.back().get());
         
@@ -351,12 +351,12 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         auto cond = visitExp(dynamic_cast<ExpAST*>(ast->exp.get()));
     
         auto br = std::make_unique<BranchIRValue>(std::move(cond), while_body_label , end_label);    
-        ctx.current_block ->ADD_Value(std::move(br));
+        ctx.current_block ->addValue(std::move(br));
 
         
         //fourth step: go while body block 
         
-        current_func ->ADD_Block(std::move(while_body_block));
+        current_func ->addBlock(std::move(while_body_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
         
         if(auto stmt = dynamic_cast<StmtAST*>(ast->while_stmt.get())){
@@ -376,13 +376,13 @@ void IRGenerator::visitStmt(const StmtAST* ast){
 
         if(need_jump_while){
             auto jump_while_entry2 = std::make_unique<JumpIRValue>(while_entry_label);
-            ctx.current_block ->ADD_Value(std::move(jump_while_entry2));
+            ctx.current_block ->addValue(std::move(jump_while_entry2));
         }
 
         ctx.loop_stack.pop_back();
         //fifth step: go end
 
-        current_func->ADD_Block(std::move(end_block));
+        current_func->addBlock(std::move(end_block));
         setCurrentBlock(current_func->ir_basicblock.back().get());
     }
 
@@ -396,7 +396,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         std::string target = ctx.loop_stack.back().end_label;
 
         auto jump = std::make_unique<JumpIRValue>(target);
-        ctx.current_block->ADD_Value(std::move(jump));
+        ctx.current_block->addValue(std::move(jump));
 
     }
     else if(ast->type == StmtAST::CONTINUE){
@@ -408,7 +408,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         std::string target = ctx.loop_stack.back().entry_label;
 
         auto jump = std::make_unique<JumpIRValue>(target);
-        ctx.current_block->ADD_Value(std::move(jump));
+        ctx.current_block->addValue(std::move(jump));
         
     }
 }
@@ -538,7 +538,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
         
         // only allocIR
         auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
-        ctx.current_block ->ADD_Value(std::move(alloc));
+        ctx.current_block ->addValue(std::move(alloc));
 
     }
     else if(ast ->type == VarDefAST::IDENTDEF){
@@ -558,7 +558,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
         // allocIR
         auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
 
-        ctx.current_block ->ADD_Value(std::move(alloc));    
+        ctx.current_block ->addValue(std::move(alloc));    
         
         
         //storeIR 
@@ -568,7 +568,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
                 auto var_value = visitExp(exp);
                 auto store = std::make_unique<StoreIRValue>(std::move(var_value),var_name);
 
-                ctx.current_block->ADD_Value(std::move(store));
+                ctx.current_block->addValue(std::move(store));
             }
         }
     }
@@ -628,7 +628,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast){
                 auto tp_left = std::make_unique<TemporaryIRValue>();
                 tp_left -> temp_name = ltp ->result_name;
 
-                ctx.current_block->ADD_Value(std::move(ltp));
+                ctx.current_block->addValue(std::move(ltp));
 
 
                 auto rtp = std::make_unique<BinaryIRValue>();
@@ -640,7 +640,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast){
                 auto tp_right = std::make_unique<TemporaryIRValue>();
                 tp_right -> temp_name = rtp ->result_name;
 
-                ctx.current_block->ADD_Value(std::move(rtp));
+                ctx.current_block->addValue(std::move(rtp));
 
 
 
@@ -652,7 +652,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name ->temp_name = orval -> result_name;
 
-                ctx.current_block->ADD_Value(std::move(orval));
+                ctx.current_block->addValue(std::move(orval));
 
                 return std::move(temp_name);
             }
@@ -683,7 +683,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast){
                 auto tp_left = std::make_unique<TemporaryIRValue>();
                 tp_left -> temp_name = ltp ->result_name;
 
-                ctx.current_block->ADD_Value(std::move(ltp));
+                ctx.current_block->addValue(std::move(ltp));
 
 
                 auto rtp = std::make_unique<BinaryIRValue>();
@@ -695,7 +695,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast){
                 auto tp_right = std::make_unique<TemporaryIRValue>();
                 tp_right -> temp_name = rtp ->result_name;
 
-                ctx.current_block->ADD_Value(std::move(rtp));
+                ctx.current_block->addValue(std::move(rtp));
 
 
 
@@ -707,7 +707,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name ->temp_name = andval -> result_name;
 
-                ctx.current_block->ADD_Value(std::move(andval));
+                ctx.current_block->addValue(std::move(andval));
 
                 return std::move(temp_name);
             }
@@ -730,10 +730,10 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitEqExp(const EqExpAST* ast){
 
                 eqval -> left = visitEqExp(eq);
                 eqval -> right = visitRelExp(rel);
-                if(ast -> op == "=="){
+                if(ast -> operator_type == "=="){
                     eqval ->operation = BinaryIRValue::EQ;
                 }
-                else if(ast -> op == "!="){
+                else if(ast -> operator_type == "!="){
                     eqval ->operation = BinaryIRValue::NE;
                 }
                 eqval -> result_name = generate_temp_name();
@@ -741,7 +741,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitEqExp(const EqExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name -> temp_name = eqval -> result_name;
 
-                ctx.current_block->ADD_Value(std::move(eqval));
+                ctx.current_block->addValue(std::move(eqval));
 
                 return std::move(temp_name);
 
@@ -767,16 +767,16 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitRelExp(const RelExpAST* ast){
 
                 relval -> left = visitRelExp(rel);
                 relval -> right = visitAddExp(add);
-                if(ast -> op == ">"){
+                if(ast -> operator_type == ">"){
                     relval ->operation = BinaryIRValue::GT;
                 }
-                else if(ast -> op == "<"){
+                else if(ast -> operator_type == "<"){
                     relval ->operation = BinaryIRValue::LT;
                 }
-                else if(ast -> op == "<="){
+                else if(ast -> operator_type == "<="){
                     relval ->operation = BinaryIRValue::LE;
                 }
-                else if(ast -> op == ">="){
+                else if(ast -> operator_type == ">="){
                     relval ->operation = BinaryIRValue::GE;
                 }
 
@@ -785,7 +785,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitRelExp(const RelExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name -> temp_name = relval -> result_name;
 
-                ctx.current_block->ADD_Value(std::move(relval));
+                ctx.current_block->addValue(std::move(relval));
 
                 return std::move(temp_name);
 
@@ -809,7 +809,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast){
     else if(ast ->type == MulExpAST::MULOPUNRAY){
         if(auto mulexp = dynamic_cast<MulExpAST*>(ast->mulexp.get())){
             if(auto unrayexp = dynamic_cast<UnaryExpAST*>(ast ->unrayexp.get())){
-                if(ast ->op == "*"){
+                if(ast ->operator_type == "*"){
                     auto mulval = std::make_unique<BinaryIRValue>();
                     mulval -> operation = BinaryIRValue::MUL;
                     mulval -> left = visitMulExp(mulexp);
@@ -819,11 +819,11 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast){
                     auto temp_value = std::make_unique<TemporaryIRValue>();
                     temp_value -> temp_name = mulval -> result_name;
 
-                    ctx.current_block->ADD_Value(std::move(mulval));
+                    ctx.current_block->addValue(std::move(mulval));
 
                     return std::move(temp_value);
                 }
-                else if(ast -> op == "/"){
+                else if(ast -> operator_type == "/"){
                     auto divval = std::make_unique<BinaryIRValue>();
                     divval -> operation = BinaryIRValue::DIV;
                     divval -> left = visitMulExp(mulexp);
@@ -833,11 +833,11 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast){
                     auto temp_value = std::make_unique<TemporaryIRValue>();
                     temp_value -> temp_name = divval -> result_name;
 
-                    ctx.current_block->ADD_Value(std::move(divval));
+                    ctx.current_block->addValue(std::move(divval));
 
                     return std::move(temp_value);       
                 }
-                else if(ast -> op == "%"){
+                else if(ast -> operator_type == "%"){
                     auto modval = std::make_unique<BinaryIRValue>();
                     modval -> operation = BinaryIRValue::MOD;
                     modval -> left = visitMulExp(mulexp);
@@ -847,7 +847,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitMulExp(const MulExpAST* ast){
                     auto temp_value = std::make_unique<TemporaryIRValue>();
                     temp_value -> temp_name = modval -> result_name;
 
-                    ctx.current_block->ADD_Value(std::move(modval));
+                    ctx.current_block->addValue(std::move(modval));
 
                     return std::move(temp_value);      
                 }
@@ -867,7 +867,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitAddExp(const AddExpAST* ast){
     else if (ast -> type == AddExpAST::ADDOPMUL){
         if(auto addexp = dynamic_cast<AddExpAST*>(ast ->addexp.get())){
             if(auto mulexp = dynamic_cast<MulExpAST*>(ast -> mulexp.get())){
-                if(ast ->op == "+"){
+                if(ast ->operator_type == "+"){
                     auto addval = std::make_unique<BinaryIRValue>();
                     
                     addval ->operation = BinaryIRValue::ADD;
@@ -878,12 +878,12 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitAddExp(const AddExpAST* ast){
                     auto temp_value = std::make_unique<TemporaryIRValue>();
                     temp_value -> temp_name = addval -> result_name;
 
-                    ctx.current_block->ADD_Value(std::move(addval));
+                    ctx.current_block->addValue(std::move(addval));
 
                     return std::move(temp_value);
 
                 }
-                else if(ast ->op == "-"){
+                else if(ast ->operator_type == "-"){
                     auto subval = std::make_unique<BinaryIRValue>();
                     
                     subval ->operation = BinaryIRValue::SUB;
@@ -894,7 +894,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitAddExp(const AddExpAST* ast){
                     auto temp_value = std::make_unique<TemporaryIRValue>();
                     temp_value -> temp_name = subval -> result_name;
 
-                    ctx.current_block->ADD_Value(std::move(subval));
+                    ctx.current_block->addValue(std::move(subval));
 
                     return std::move(temp_value);
 
@@ -939,7 +939,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name ->temp_name = subval ->result_name;
                
-                ctx.current_block->ADD_Value(std::move(subval));
+                ctx.current_block->addValue(std::move(subval));
 
                 return std::move(temp_name);
             }
@@ -956,7 +956,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast){
                 auto temp_name = std::make_unique<TemporaryIRValue>();
                 temp_name ->temp_name = eqval ->result_name;
 
-                ctx.current_block->ADD_Value(std::move(eqval));
+                ctx.current_block->addValue(std::move(eqval));
 
                 return std::move(temp_name);
             }
@@ -998,7 +998,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
                 auto load = std::make_unique<LoadIRValue>();
                 load ->result_name = temp_name;
                 load ->src = symbol->ir_name;  // 使用 symbol->ir_name
-                ctx.current_block->ADD_Value(std::move(load));
+                ctx.current_block->addValue(std::move(load));
 
                 auto temp = std::make_unique<TemporaryIRValue>();
                 temp -> temp_name = temp_name;
@@ -1082,7 +1082,7 @@ int IRGenerator::evaluateConstExp(const BaseAST* ast) {
         } else {
             int left = evaluateConstExp(eqexp->eqexp.get());
             int right = evaluateConstExp(eqexp->relexp.get());
-            if (eqexp->op == "==") {
+            if (eqexp->operator_type == "==") {
                 return left == right;
             } else {  // !=
                 return left != right;
@@ -1097,11 +1097,11 @@ int IRGenerator::evaluateConstExp(const BaseAST* ast) {
         } else {
             int left = evaluateConstExp(relexp->relexp.get());
             int right = evaluateConstExp(relexp->addexp.get());
-            if (relexp->op == "<") {
+            if (relexp->operator_type == "<") {
                 return left < right;
-            } else if (relexp->op == ">") {
+            } else if (relexp->operator_type == ">") {
                 return left > right;
-            } else if (relexp->op == "<=") {
+            } else if (relexp->operator_type == "<=") {
                 return left <= right;
             } else {  // >=
                 return left >= right;
@@ -1116,7 +1116,7 @@ int IRGenerator::evaluateConstExp(const BaseAST* ast) {
         } else {
             int left = evaluateConstExp(addexp->addexp.get());
             int right = evaluateConstExp(addexp->mulexp.get());
-            if (addexp->op == "+") {
+            if (addexp->operator_type == "+") {
                 return left + right;
             } else {  // -
                 return left - right;
@@ -1131,9 +1131,9 @@ int IRGenerator::evaluateConstExp(const BaseAST* ast) {
         } else {
             int left = evaluateConstExp(mulexp->mulexp.get());
             int right = evaluateConstExp(mulexp->unrayexp.get());
-            if (mulexp->op == "*") {
+            if (mulexp->operator_type == "*") {
                 return left * right;
-            } else if (mulexp->op == "/") {
+            } else if (mulexp->operator_type == "/") {
                 if (right == 0) {
                     throw std::runtime_error("Division by zero in constant expression");
                 }

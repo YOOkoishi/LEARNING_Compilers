@@ -54,29 +54,29 @@ int main(int argc, const char *argv[]) {
 
   // 调用 parser 函数, parser 函数会进一步调用 lexer 解析输入文件的
   unique_ptr<BaseAST> ast;
-  auto ret = yyparse(ast);
-  if(ret != 0){
-    fprintf(stderr, "ERROR: yyparse returned %d\n", ret);
+  auto parse_result = yyparse(ast);
+  if(parse_result != 0){
+    fprintf(stderr, "ERROR: yyparse returned %d\n", parse_result);
     fprintf(stderr, "Parse failed!\n");
-    return ret;
+    return parse_result;
   }
-  assert(!ret);
+  assert(!parse_result);
 
   // 输出解析得到的 AST, 其实就是个字符串
   // ast -> Dump();
   // cout << endl;
 
-  IRGenerator ir;
+  IRGenerator ir_generator;
   if(ast){
     if(auto tp_ast = dynamic_cast<const CompUnitAST*>(ast.get())){
-      ir.visitCompUnit(tp_ast);
+      ir_generator.visitCompUnit(tp_ast);
     }
   }
 
-  auto ir_fin = ir.get_irprogram();
+  auto ir_program = ir_generator.get_irprogram();
   std::string mode_str(mode);
-  if(mode_str == "-koopa")ir_fin -> DumpFunction();
-  else if(mode_str == "-riscv")ir_fin -> To_RiscV();
+  if(mode_str == "-koopa")ir_program -> dumpFunctions();
+  else if(mode_str == "-riscv")ir_program -> To_RiscV();
   cout << endl;
   return 0;
 }
