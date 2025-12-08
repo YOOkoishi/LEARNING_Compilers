@@ -101,7 +101,7 @@ FuncDef
 FuncType
   : INT {
     auto ast = new FunTypeAST();
-    ast -> tp = "int";
+    ast -> type = "int";
     $$ = ast;
 
   }
@@ -414,14 +414,14 @@ EqExp
   | EqExp EQ RelExp{
     auto eq = new EqExpAST(EqExpAST::EQREL);
     eq -> eqexp = unique_ptr<BaseAST>($1);
-    eq -> op = "==";
+    eq -> operator_type = "==";
     eq -> relexp = unique_ptr<BaseAST>($3);
     $$ = eq;
   }
   | EqExp NE RelExp{
     auto eq = new EqExpAST(EqExpAST::EQREL);
     eq -> eqexp = unique_ptr<BaseAST>($1);
-    eq -> op = "!=";
+    eq -> operator_type = "!=";
     eq -> relexp = unique_ptr<BaseAST>($3);
     $$ = eq;
   }
@@ -439,28 +439,28 @@ RelExp
   | RelExp LT AddExp {
     auto rel = new RelExpAST(RelExpAST::RELADD);
     rel -> relexp = unique_ptr<BaseAST>($1);
-    rel -> op = "<";
+    rel -> operator_type = "<";
     rel -> addexp = unique_ptr<BaseAST>($3);
     $$ = rel;
   }
   | RelExp GT AddExp {
     auto rel = new RelExpAST(RelExpAST::RELADD);
     rel -> relexp = unique_ptr<BaseAST>($1);
-    rel -> op = ">";
+    rel -> operator_type = ">";
     rel -> addexp = unique_ptr<BaseAST>($3);
     $$ = rel;
   }
   | RelExp LE AddExp {
     auto rel = new RelExpAST(RelExpAST::RELADD);
     rel -> relexp = unique_ptr<BaseAST>($1);
-    rel -> op = "<=";
+    rel -> operator_type = "<=";
     rel -> addexp = unique_ptr<BaseAST>($3);
     $$ = rel;
   }
   | RelExp GE AddExp {
     auto rel = new RelExpAST(RelExpAST::RELADD);
     rel -> relexp = unique_ptr<BaseAST>($1);
-    rel -> op = ">=";
+    rel -> operator_type = ">=";
     rel -> addexp = unique_ptr<BaseAST>($3);
     $$ = rel;
   }
@@ -479,14 +479,14 @@ AddExp
     auto addexp = new AddExpAST(AddExpAST::ADDOPMUL);
     addexp -> addexp = unique_ptr<BaseAST>($1);
     addexp -> mulexp = unique_ptr<BaseAST>($3);
-    addexp -> op = "+";
+    addexp -> operator_type = "+";
     $$ = addexp;
   }
   | AddExp '-' MulExp {
     auto addexp = new AddExpAST(AddExpAST::ADDOPMUL);
     addexp -> addexp = unique_ptr<BaseAST>($1);
     addexp -> mulexp = unique_ptr<BaseAST>($3);
-    addexp -> op = "-";
+    addexp -> operator_type = "-";
     $$ = addexp;
   }
   ;
@@ -504,21 +504,21 @@ MulExp
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
-    mulexp -> op = "*";
+    mulexp -> operator_type = "*";
     $$ = mulexp;
   } 
   | MulExp '/' UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
-    mulexp -> op = "/";
+    mulexp -> operator_type = "/";
     $$ = mulexp;
   }
   | MulExp '%' UnaryExp {
     auto mulexp = new MulExpAST(MulExpAST::MULOPUNRAY);
     mulexp -> mulexp = unique_ptr<BaseAST>($1);
     mulexp -> unrayexp = unique_ptr<BaseAST>($3);
-    mulexp -> op = "%";
+    mulexp -> operator_type = "%";
     $$ = mulexp;
   }
   ;

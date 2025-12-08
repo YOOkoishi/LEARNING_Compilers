@@ -208,8 +208,8 @@ class IRBasicBlock {
 public:
     std::string block_name;
     std::vector<std::unique_ptr<BaseIRValue>> ir_value;
-    void ADD_Value(std::unique_ptr<BaseIRValue> val);
-    void DumpValue() const;
+    void addValue(std::unique_ptr<BaseIRValue> value);
+    void dumpValues() const;
     void To_RiscV() const;
 
 };
@@ -221,8 +221,8 @@ public:
     std::string function_name;
     std::string functype;
     std::vector<std::unique_ptr<IRBasicBlock>> ir_basicblock;
-    void ADD_Block(std::unique_ptr<IRBasicBlock> block);
-    void DumpBlock() const;
+    void addBlock(std::unique_ptr<IRBasicBlock> block);
+    void dumpBlocks() const;
     void To_RiscV() const;
 };
 
@@ -232,8 +232,8 @@ class IRProgram {
 public:
     std::vector<std::unique_ptr<BaseIRValue>> golbal_value;
     std::vector<std::unique_ptr<IRFunction>> ir_function;
-    void ADD_Function(std::unique_ptr<IRFunction> func);
-    void DumpFunction() const;
+    void addFunction(std::unique_ptr<IRFunction> function);
+    void dumpFunctions() const;
     void To_RiscV() const;
 };
 

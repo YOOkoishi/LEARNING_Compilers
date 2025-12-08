@@ -198,26 +198,26 @@ void BranchIRValue::Dump() const {
 }
 
 
-void IRBasicBlock::DumpValue() const{
+void IRBasicBlock::dumpValues() const{
     std::cout << "\n" << block_name << ":" << std::endl;
-    for(const auto &val : ir_value){
-        val -> Dump();
+    for(const auto &value : ir_value){
+        value -> Dump();
     }    
 }
 
 
-void IRFunction::DumpBlock() const{
+void IRFunction::dumpBlocks() const{
     std::cout << "fun @" << function_name << "() : " << functype << " {\n";
     for(const auto &block : ir_basicblock){
-        block -> DumpValue();
+        block -> dumpValues();
     }
     std::cout << "\n}";
 }
 
 
-void IRProgram::DumpFunction() const{
-    for(const auto &fun : ir_function){
-        fun -> DumpBlock();
+void IRProgram::dumpFunctions() const{
+    for(const auto &function : ir_function){
+        function -> dumpBlocks();
     }
 }
 
@@ -227,18 +227,18 @@ void IRProgram::DumpFunction() const{
 
 
 
-void IRFunction::ADD_Block(std::unique_ptr<IRBasicBlock> block){
+void IRFunction::addBlock(std::unique_ptr<IRBasicBlock> block){
     ir_basicblock.push_back(std::move(block));
 }
 
 
-void IRBasicBlock::ADD_Value(std::unique_ptr<BaseIRValue> val){
-    ir_value.push_back(std::move(val));
+void IRBasicBlock::addValue(std::unique_ptr<BaseIRValue> value){
+    ir_value.push_back(std::move(value));
 }
 
 
-void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
-    ir_function.push_back(std::move(func));
+void IRProgram::addFunction(std::unique_ptr<IRFunction> function){
+    ir_function.push_back(std::move(function));
 }
 
 
@@ -252,8 +252,8 @@ void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
 
 void IRProgram::To_RiscV() const{
     std::cout<<"  .text"<<std::endl;
-    for(const auto &fun : ir_function){
-        fun -> To_RiscV();
+    for(const auto &function : ir_function){
+        function -> To_RiscV();
     }
 }
 
@@ -306,8 +306,8 @@ void IRBasicBlock::To_RiscV() const{
     // 使用 .L 前缀避免与函数名冲突
     std::cout << ".L" << label << ":" << std::endl;
 
-    for(const auto &val : ir_value){
-        val ->To_RiscV();
+    for(const auto &value : ir_value){
+        value ->To_RiscV();
         std::cout<<std::endl;
     }
 }

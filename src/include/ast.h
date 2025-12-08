@@ -31,7 +31,7 @@ public:
 
 class FunTypeAST : public BaseAST {
 public:
-    std::string tp;
+    std::string type;
     void Dump() const override;
 };
 
@@ -152,7 +152,7 @@ public:
     MulExpAST(Type t) : type(t){};
     std::unique_ptr<BaseAST> unrayexp;
     std::unique_ptr<BaseAST> mulexp;
-    std::string op;
+    std::string operator_type;
 
     void Dump() const override;
 };
@@ -165,7 +165,7 @@ public:
     AddExpAST(Type t) : type(t){};
     std::unique_ptr<BaseAST> mulexp;
     std::unique_ptr<BaseAST> addexp;
-    std::string op;
+    std::string operator_type;
 
     void Dump() const override;
 };
@@ -205,7 +205,7 @@ public:
 
     std::unique_ptr<BaseAST> relexp;
     std::unique_ptr<BaseAST> eqexp;
-    std::string op;
+    std::string operator_type;
     void Dump() const override;
     
 };
@@ -219,7 +219,7 @@ public:
 
     std::unique_ptr<BaseAST> relexp;
     std::unique_ptr<BaseAST> addexp;
-    std::string op;
+    std::string operator_type;
     void Dump() const override;
     
 };

@@ -18,7 +18,7 @@ void FunDefAST :: Dump() const{
 
 void FunTypeAST :: Dump() const{
     std::cout << "FuncTypeAST { ";
-    std::cout << tp ;
+    std::cout << type ;
     std::cout << " } ";
 }
 
