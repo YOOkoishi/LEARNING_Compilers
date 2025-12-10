@@ -132,7 +132,7 @@ FuncFParams
   }
   | FuncFParams ',' FuncFParam {
     auto ast = dynamic_cast<FuncFParamsAST*>($1);
-    ast -> funcflist.push_back(unique_ptr<BaseAST>($1));
+    ast -> funcflist.push_back(unique_ptr<BaseAST>($3));
     $$ = ast;
   }
 

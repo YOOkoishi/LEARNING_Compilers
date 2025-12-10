@@ -46,12 +46,12 @@ int main(int argc, const char *argv[]) {
   // 打开输入文件, 并且指定 lexer 在解析的时候读取这个文件
   yyin = fopen(input, "r");
   assert(yyin);
-
+  
   // 如果不是调试模式，重定向输出到文件
   if (!debug_mode) {
     freopen(output, "w", stdout);
   }
-
+  
   // 调用 parser 函数, parser 函数会进一步调用 lexer 解析输入文件的
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
@@ -61,22 +61,24 @@ int main(int argc, const char *argv[]) {
     return ret;
   }
   assert(!ret);
-
-  // 输出解析得到的 AST, 其实就是个字符串
-  // ast -> Dump();
-  // cout << endl;
-
+  
+  std::string mode_str(mode);
+  if(mode_str == "-ast"){
+    ast -> Dump();
+    return 0;
+  }
+  
   IRGenerator ir;
   if(ast){
     if(auto tp_ast = dynamic_cast<const CompUnitAST*>(ast.get())){
       ir.visitCompUnit(tp_ast);
     }
   }
-
+  
   auto ir_fin = ir.get_irprogram();
-  std::string mode_str(mode);
   if(mode_str == "-koopa")ir_fin -> DumpFunction();
   else if(mode_str == "-riscv")ir_fin -> To_RiscV();
+  
   cout << endl;
   return 0;
 }
