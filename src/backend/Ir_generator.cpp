@@ -33,7 +33,7 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
     if (ast -> fun_type){
         if (auto fun_type = dynamic_cast<const FunTypeAST*>(ast ->fun_type.get())){
             visitFunType(fun_type);
-            ir_fun ->functype = ((fun_type ->tp) == "int")? "i32":"other";
+            ir_fun ->functype = ((fun_type ->type) == FunTypeAST::INT)? "i32":"other";
         }
     }
 

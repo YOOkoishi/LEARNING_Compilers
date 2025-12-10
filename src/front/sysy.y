@@ -50,7 +50,7 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN 
+%token INT RETURN VOID
 %token <str_val> IDENT CONST
 %token <int_val> INT_CONST
 
@@ -68,42 +68,99 @@ using namespace std;
 %left '*' '/' '%'
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number 
+%type <ast_val> FuncDef FuncType Block Stmt Number CompUnit
 %type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp ConstExp
 %type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval ConstDefs BType
-%type <ast_val> VarDecl VarDef VarDefs InitVal
+%type <ast_val> VarDecl VarDef VarDefs InitVal FuncFParams FuncFParam FuncRParams 
 /* %type <int_val>  */
 %type <str_val> UnaryOp
+
+
+%start Root
 
 %%
 
 
+
+Root 
+  : CompUnit {
+    ast = unique_ptr<BaseAST>($1);
+  }
+  ;
+
+
 CompUnit
   : FuncDef {
-    auto comp_unit = make_unique<CompUnitAST>();
+    auto comp_unit = new CompUnitAST(CompUnitAST::FUNCDEF);
     comp_unit -> fun_def = unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
+    $$ = comp_unit;
+  }
+  | CompUnit FuncDef {
+    auto comp_unit = new CompUnitAST(CompUnitAST::COMPFUNC);
+    comp_unit -> fun_def = unique_ptr<BaseAST>($2);
+    comp_unit -> compunit = unique_ptr<BaseAST>($1);
+    $$ = comp_unit;
   }
   ;
 
 
 FuncDef
   : FuncType IDENT '(' ')' Block {
-    auto ast = new FunDefAST();
+    auto ast = new FunDefAST(FunDefAST::NOFUNCF);
     ast -> fun_type = unique_ptr<BaseAST>($1);
     ast -> ident = *unique_ptr<string>($2);
     ast -> block = unique_ptr<BaseAST>($5);
     $$ = ast;
-  }
+  } 
+  | FuncType IDENT '(' FuncFParams ')' Block {
+    auto ast = new FunDefAST(FunDefAST::FUNCF);
+    ast -> fun_type = unique_ptr<BaseAST>($1);
+    ast -> ident = *unique_ptr<string>($2);
+    ast -> funcfparams = unique_ptr<BaseAST>($4);
+    ast -> block = unique_ptr<BaseAST>($6);
+    $$ = ast;
+  } 
   ;
+
+
+
+FuncFParams
+  : FuncFParam {
+    auto ast = new FuncFParamsAST();
+    ast -> funcflist.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }
+  | FuncFParams ',' FuncFParam {
+    auto ast = dynamic_cast<FuncFParamsAST*>($1);
+    ast -> funcflist.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }
+
+
+
+
+FuncFParam
+  : BType IDENT {
+    auto ast = new FuncFParamAST();
+    ast -> btype = unique_ptr<BaseAST>($1);
+    ast -> ident = *unique_ptr<std::string>($2);
+    $$ = ast;
+  }
+
+
+
+
 
 
 FuncType
   : INT {
-    auto ast = new FunTypeAST();
-    ast -> tp = "int";
+    auto ast = new FunTypeAST(FunTypeAST::INT);
     $$ = ast;
 
+  }
+  | VOID {
+    auto ast = new FunTypeAST(FunTypeAST::VOID);
+    $$ = ast;
   }
   ;
 
@@ -360,6 +417,11 @@ Stmt
 
 
 
+
+
+
+
+
 Exp 
   : LOrExp {
     auto exp = new ExpAST();
@@ -559,7 +621,32 @@ UnaryExp
     unaryexp -> unaryexp = unique_ptr<BaseAST>($2);
     $$ = unaryexp;
   }
+  | IDENT '(' ')' {
+    auto unaryexp = new UnaryExpAST(UnaryExpAST::FUNCVOID);
+    unaryexp -> ident = *unique_ptr<std::string>($1);
+    $$ = unaryexp;
+  }
+  | IDENT '(' FuncRParams ')' {
+    auto unaryexp = new UnaryExpAST(UnaryExpAST::FUNCRPARAMS);
+    unaryexp -> ident = *unique_ptr<std::string>($1);
+    unaryexp -> funcrparams = unique_ptr<BaseAST>($3);
+    $$ = unaryexp;
+  }
   ;
+
+
+
+FuncRParams 
+  : Exp {
+    auto ast = new FuncRParamsAST();
+    ast -> explist.push_back(unique_ptr<BaseAST>($1));
+    $$ = ast;
+  }
+  | FuncRParams ',' Exp {
+    auto ast = dynamic_cast<FuncRParamsAST*>($1);
+    ast -> explist.push_back(unique_ptr<BaseAST>($3));
+    $$ = ast;
+  }
 
 
 

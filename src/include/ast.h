@@ -15,15 +15,35 @@ public:
 
 class CompUnitAST : public BaseAST {
 public:
+    enum Type {
+        FUNCDEF,
+        COMPFUNC
+    } type;
+
+    CompUnitAST(Type t) : type(t){};
+    CompUnitAST() = default;
+    std::unique_ptr<BaseAST> compunit;
     std::unique_ptr<BaseAST> fun_def;
     void Dump() const override;
 };
 
 
+//8.1
+
+
 class FunDefAST : public BaseAST {
 public:
+    enum Type {
+        NOFUNCF,
+        FUNCF
+    } type;
+
+    FunDefAST()=default;
+    FunDefAST(Type t) :type(t){};
+       
     std::unique_ptr<BaseAST> fun_type;
     std::string ident;
+    std::unique_ptr<BaseAST> funcfparams;
     std::unique_ptr<BaseAST> block;
     void Dump() const override;
 };
@@ -31,7 +51,40 @@ public:
 
 class FunTypeAST : public BaseAST {
 public:
-    std::string tp;
+    enum Type{
+        INT,
+        VOID
+    } type;
+    FunTypeAST(Type t): type(t){};
+    FunTypeAST() = default;
+    void Dump() const override;
+};
+
+
+
+
+class FuncFParamsAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> funcflist;    
+    void Dump() const override;
+};
+
+
+
+
+class FuncFParamAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> btype;
+    std::string ident;
+    void Dump() const override;
+};
+
+
+
+class FuncRParamsAST : public BaseAST{
+public:
+    std::vector<std::unique_ptr<BaseAST>> explist;
+
     void Dump() const override;
 };
 
@@ -45,11 +98,15 @@ public:
 };
 
 
+
+
 class BlockItemsAST : public BaseAST{
 public:
     std::vector<std::unique_ptr<BaseAST>> item;
     void Dump() const override;
 };
+
+
 
 
 class BlockItemAST : public BaseAST {
@@ -128,12 +185,20 @@ public:
 
 class UnaryExpAST : public BaseAST {
 public:
-    enum Type {PRIMARYEXP , UNARYEXP} type;
+    enum Type {PRIMARYEXP , 
+                UNARYEXP , 
+                FUNCVOID,
+                FUNCRPARAMS} type;
 
     UnaryExpAST(Type t) : type(t){};
+    UnaryExpAST() = default;
+
+    std::string ident;
+    std::unique_ptr<BaseAST> funcrparams;
     std::unique_ptr<BaseAST> primaryexp;
     std::string unaryop;
     std::unique_ptr<BaseAST> unaryexp;
+    
     void Dump() const override;
 };
 

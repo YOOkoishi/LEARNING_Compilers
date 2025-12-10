@@ -4,6 +4,9 @@
 
 void CompUnitAST :: Dump() const {
     std::cout << "CompUnitAST { ";
+    if (type == COMPFUNC) {
+        compunit->Dump();
+    }
     fun_def -> Dump();
     std::cout << " } ";
 }
@@ -11,15 +14,45 @@ void CompUnitAST :: Dump() const {
 void FunDefAST :: Dump() const{
     std::cout << "FuncDefAST { ";
     fun_type -> Dump();
-    std::cout << ident << " ( ) ";
+    std::cout << " " << ident << " ( ";
+    if (type == FUNCF && funcfparams) {
+        funcfparams->Dump();
+    }
+    std::cout << " ) ";
     block -> Dump();
     std::cout << " } " ;
 }
 
 void FunTypeAST :: Dump() const{
     std::cout << "FuncTypeAST { ";
-    std::cout << tp ;
+    if (type == INT) std::cout << "int";
+    else if (type == VOID) std::cout << "void";
     std::cout << " } ";
+}
+
+void FuncFParamsAST::Dump() const {
+    std::cout << "FuncFParamsAST { ";
+    for (const auto& param : funcflist) {
+        param->Dump();
+        std::cout << ", ";
+    }
+    std::cout << " }";
+}
+
+void FuncFParamAST::Dump() const {
+    std::cout << "FuncFParamAST { ";
+    btype->Dump();
+    std::cout << " " << ident;
+    std::cout << " }";
+}
+
+void FuncRParamsAST::Dump() const {
+    std::cout << "FuncRParamsAST { ";
+    for (const auto& exp : explist) {
+        exp->Dump();
+        std::cout << ", ";
+    }
+    std::cout << " }";
 }
 
 

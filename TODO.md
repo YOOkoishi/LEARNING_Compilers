@@ -92,8 +92,8 @@
 
 对于 8.1
 
-- [ ] ast
-- [ ] bison  (new stmt)
+- [x] ast
+- [x] bison  
 - [ ] 符号表
 - [ ] ir generator
 - [ ] koopa ir output
