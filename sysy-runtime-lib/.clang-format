@@ -1,0 +1,6 @@
+# Max's C++ coding style
+# By MaxXing, 2025
+
+BasedOnStyle: Google
+DerivePointerAlignment: false
+PointerAlignment: Right

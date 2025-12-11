@@ -17,13 +17,16 @@ class CompUnitAST : public BaseAST {
 public:
     enum Type {
         FUNCDEF,
-        COMPFUNC
+        DECL,
+        COMPFUNC,
+        COMPDECL
     } type;
 
     CompUnitAST(Type t) : type(t){};
     CompUnitAST() = default;
     std::unique_ptr<BaseAST> compunit;
     std::unique_ptr<BaseAST> fun_def;
+    std::unique_ptr<BaseAST> decl;
     void Dump() const override;
 };
 

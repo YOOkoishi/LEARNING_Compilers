@@ -161,7 +161,23 @@ public:
 
 
 
+class CallIRValue : public BaseIRValue {
+public:
+    enum Type {
+        VOID,
+        OTHER
+    } type;
+    
+    CallIRValue(Type t): type(t) {};
+    CallIRValue() = default;
 
+    std::string func_name;
+    std::vector<std::unique_ptr<BaseIRValue>> funcrparams;
+    std::string result_name;
+
+    void Dump() const override;
+    void To_RiscV() const override;    
+};
 
 
 
@@ -219,6 +235,7 @@ public:
 class IRFunction {
 public:
     std::string function_name;
+    std::vector<std::pair<std::string,std::string>> funcfparams ;
     std::string functype;
     std::vector<std::unique_ptr<IRBasicBlock>> ir_basicblock;
     void ADD_Block(std::unique_ptr<IRBasicBlock> block);

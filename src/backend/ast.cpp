@@ -6,8 +6,15 @@ void CompUnitAST :: Dump() const {
     std::cout << "CompUnitAST { ";
     if (type == COMPFUNC) {
         compunit->Dump();
+        fun_def -> Dump();
+    } else if (type == COMPDECL) {
+        compunit->Dump();
+        decl -> Dump();
+    } else if (type == FUNCDEF) {
+        fun_def -> Dump();
+    } else if (type == DECL) {
+        decl -> Dump();
     }
-    fun_def -> Dump();
     std::cout << " } ";
 }
 

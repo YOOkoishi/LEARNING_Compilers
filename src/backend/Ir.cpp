@@ -191,6 +191,28 @@ void JumpIRValue::Dump() const {
     std::cout << "  jump " << target_label << std::endl;
 }
 
+
+
+
+void CallIRValue::Dump() const {
+    std::cout << "  ";
+    if (type == OTHER) {
+        std::cout << result_name << " = ";
+    }
+    std::cout << "call " << func_name << "(";
+    for (size_t i = 0; i < funcrparams.size(); ++i) {
+        funcrparams[i]->Dump();
+        if (i < funcrparams.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << ")" << std::endl;
+}
+
+
+
+
+
 void BranchIRValue::Dump() const {
     std::cout << "  br ";
     if (condition) condition->Dump();
@@ -207,15 +229,32 @@ void IRBasicBlock::DumpValue() const{
 
 
 void IRFunction::DumpBlock() const{
-    std::cout << "fun @" << function_name << "() : " << functype << " {\n";
+    std::cout << "fun " << function_name << "(";
+    for(size_t i = 0; i < funcfparams.size(); ++i) {
+        std::cout << funcfparams[i].first << ": " << funcfparams[i].second;
+        if(i < funcfparams.size() - 1) std::cout << ", ";
+    }
+    std::cout << ")";
+    if(functype != "void") std::cout << ": " << functype;
+    std::cout << " {\n";
     for(const auto &block : ir_basicblock){
         block -> DumpValue();
     }
-    std::cout << "\n}";
+    std::cout << "\n}\n\n";
 }
 
 
 void IRProgram::DumpFunction() const{
+    std::cout << "decl @getint(): i32" << std::endl;
+    std::cout << "decl @getch(): i32" << std::endl;
+    std::cout << "decl @getarray(*i32): i32" << std::endl;
+    std::cout << "decl @putint(i32)" << std::endl;
+    std::cout << "decl @putch(i32)" << std::endl;
+    std::cout << "decl @putarray(i32, *i32)" << std::endl;
+    std::cout << "decl @starttime()" << std::endl;
+    std::cout << "decl @stoptime()" << std::endl;
+    std::cout << std::endl;
+
     for(const auto &fun : ir_function){
         fun -> DumpBlock();
     }
@@ -280,8 +319,12 @@ void IRFunction::To_RiscV() const{
 
 
     //second time
-    std::cout<<"  .global "<<function_name<<std::endl;
-    std::cout<<function_name<<":\n";
+    std::string name = function_name;
+    if (name.length() > 0 && name[0] == '@') {
+        name = name.substr(1);
+    }
+    std::cout<<"  .globl "<<name<<std::endl;
+    std::cout<<name<<":\n";
 
     if(frame_size > 0){
         std::cout << "  addi sp, sp, -" << frame_size << std::endl;
@@ -478,6 +521,37 @@ void BranchIRValue::To_RiscV() const {
 
     std::cout << "  bnez t0, .L" << t_label << std::endl;
     std::cout << "  j .L" << f_label << std::endl;
+}
+
+
+void CallIRValue::To_RiscV() const {
+    // 1. Prepare arguments
+    for (size_t i = 0; i < funcrparams.size(); ++i) {
+        if (i < 8) {
+            // Pass in a0-a7
+            if (auto* int_val = dynamic_cast<IntegerIRValue*>(funcrparams[i].get())) {
+                std::cout << "  li a" << i << ", " << int_val->value << std::endl;
+            } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(funcrparams[i].get())) {
+                auto& stack = GenContext::current_ctx->stack;
+                int offset = stack.getOffset(temp->temp_name);
+                std::cout << "  lw a" << i << ", " << offset << "(sp)" << std::endl;
+            }
+        } else {
+            // Pass on stack (not implemented for now as per common requirements)
+        }
+    }
+    
+    // 2. Call
+    std::string name = func_name;
+    if (name.length() > 0 && name[0] == '@') name = name.substr(1);
+    std::cout << "  call " << name << std::endl;
+    
+    // 3. Handle return value
+    if (type == OTHER) {
+        auto& stack = GenContext::current_ctx->stack;
+        int offset = stack.getOffset(result_name);
+        std::cout << "  sw a0, " << offset << "(sp)" << std::endl;
+    }
 }
 
 

@@ -37,7 +37,7 @@ public:
     std::vector<std::map<std::string, std::shared_ptr<Symbol>>> symbol_table;
     
 private:
-    int current_scope_level = 0;
+    int current_scope_level = -1;
     // 用于生成唯一 IR 名称
     std::map<std::string, int> name_counter;
     
@@ -64,10 +64,11 @@ public:
     // 生成唯一的 IR 名称
     std::string generateIRName(const std::string& name) {
         int count = name_counter[name]++;
+        std::string prefix = (current_scope_level == 0) ? "@" : "%";
         if (count == 0) {
-            return "@" + name;
+            return prefix + name;
         }
-        return "@" + name + "_" + std::to_string(count);
+        return prefix + name + "_" + std::to_string(count);
     }
     
     // 声明符号（插入当前作用域），返回生成的 IR 名称

@@ -12,29 +12,82 @@ IRGenerator::IRGenerator()
     ctx.program = program.get();
     ctx.symbol_table = symbol_table.get();
     ctx.current_block = nullptr;
+    GenContext::current_ctx = &ctx; // Initialize static pointer
+
+    // Register SysY library functions
+    ctx.symbol_table->declare("getint", SymbolType::FUNCTION, DataType::INT);
+    ctx.symbol_table->declare("getch", SymbolType::FUNCTION, DataType::INT);
+    ctx.symbol_table->declare("getarray", SymbolType::FUNCTION, DataType::INT);
+    ctx.symbol_table->declare("putint", SymbolType::FUNCTION, DataType::VOID);
+    ctx.symbol_table->declare("putch", SymbolType::FUNCTION, DataType::VOID);
+    ctx.symbol_table->declare("putarray", SymbolType::FUNCTION, DataType::VOID);
+    ctx.symbol_table->declare("starttime", SymbolType::FUNCTION, DataType::VOID);
+    ctx.symbol_table->declare("stoptime", SymbolType::FUNCTION, DataType::VOID);
 }
 
 
 void IRGenerator::visitCompUnit(const CompUnitAST* ast){
-    if(ast && ast -> fun_def){
+    if(!ast) return;
+    
+    if(ast->type == CompUnitAST::FUNCDEF){
         if(auto func_def = dynamic_cast<const FunDefAST*>(ast->fun_def.get())){
             visitFunDef(func_def);
         }
-    } 
+    }
+    else if(ast->type == CompUnitAST::DECL){
+        if(auto decl = dynamic_cast<const DeclAST*>(ast->decl.get())){
+            visitDecl(decl);
+        }
+    }
+    else if(ast->type == CompUnitAST::COMPFUNC){
+        visitCompUnit(dynamic_cast<const CompUnitAST*>(ast->compunit.get()));
+        if(auto func_def = dynamic_cast<const FunDefAST*>(ast->fun_def.get())){
+            visitFunDef(func_def);
+        }
+    }
+    else if(ast->type == CompUnitAST::COMPDECL){
+        visitCompUnit(dynamic_cast<const CompUnitAST*>(ast->compunit.get()));
+        if(auto decl = dynamic_cast<const DeclAST*>(ast->decl.get())){
+            visitDecl(decl);
+        }
+    }
 }
 
 
 void IRGenerator::visitFunDef(const FunDefAST* ast){
     if(!ast) return;
     
-    auto ir_fun = std::make_unique<IRFunction>(); 
-    ir_fun -> function_name = (ast -> ident);
-    
-    if (ast -> fun_type){
-        if (auto fun_type = dynamic_cast<const FunTypeAST*>(ast ->fun_type.get())){
-            visitFunType(fun_type);
-            ir_fun ->functype = ((fun_type ->type) == FunTypeAST::INT)? "i32":"other";
+    // 1. Declare function in global symbol table
+    DataType ret_type = DataType::VOID;
+    if (ast->fun_type) {
+        if (auto ft = dynamic_cast<const FunTypeAST*>(ast->fun_type.get())) {
+            if (ft->type == FunTypeAST::INT) ret_type = DataType::INT;
         }
+    }
+    
+    if (!ctx.symbol_table->lookup(ast->ident)) {
+        ctx.symbol_table->declare(ast->ident, SymbolType::FUNCTION, ret_type);
+    }
+    
+    auto ir_fun = std::make_unique<IRFunction>(); 
+    ir_fun -> function_name = "@" + ast->ident;
+    ir_fun -> functype = (ret_type == DataType::INT) ? "i32" : "void";
+    
+    // 2. Enter scope for parameters and body
+    ctx.symbol_table->enterScope();
+    
+    // 3. Process parameters
+    if(ast -> type == FunDefAST::FUNCF){
+        if(auto funcfs = dynamic_cast<const FuncFParamsAST*>(ast -> funcfparams.get())){
+            for(auto& i : funcfs ->funcflist){
+                if(auto funcf = dynamic_cast<FuncFParamAST*>(i.get())){
+                    std::string param_name = funcf->ident;
+                    std::string ir_param_name = "@" + param_name; 
+                    
+                    ir_fun ->funcfparams.push_back({ir_param_name, "i32"});
+                }
+            }
+        }   
     }
 
     program ->ADD_Function(std::move(ir_fun));
@@ -50,9 +103,55 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
     
     setCurrentBlock(current_block);
 
+    // Generate Alloc and Store for params
+    if(ast -> type == FunDefAST::FUNCF){
+        if(auto funcfs = dynamic_cast<const FuncFParamsAST*>(ast -> funcfparams.get())){
+            for(auto& i : funcfs ->funcflist){
+                if(auto funcf = dynamic_cast<FuncFParamAST*>(i.get())){
+                    std::string param_name = funcf->ident;
+                    std::string ir_param_name = "@" + param_name;
+                    
+                    // Declare local var for param
+                    std::string local_var = ctx.symbol_table->declare(param_name, SymbolType::VAR, DataType::INT);
+                    
+                    // Alloc
+                    auto alloc = std::make_unique<AllocIRValue>(local_var, "i32");
+                    ctx.current_block->ADD_Value(std::move(alloc));
+                    
+                    // Store
+                    auto param_val = std::make_unique<TemporaryIRValue>();
+                    param_val->temp_name = ir_param_name;
+                    
+                    auto store = std::make_unique<StoreIRValue>(std::move(param_val), local_var);
+                    ctx.current_block->ADD_Value(std::move(store));
+                }
+            }
+        }   
+    }
+
+    // 4. Process Block
     if (ast ->block){
         if(auto block = dynamic_cast<const BlockAST*>(ast->block.get())){
             visitBlock(block);
+        }
+    }
+    
+    ctx.symbol_table->exitScope();
+    
+    // 5. Ensure return
+    if (ctx.current_block && (ctx.current_block->ir_value.empty() || 
+        (!dynamic_cast<ReturnIRValue*>(ctx.current_block->ir_value.back().get()) &&
+         !dynamic_cast<JumpIRValue*>(ctx.current_block->ir_value.back().get()) &&
+         !dynamic_cast<BranchIRValue*>(ctx.current_block->ir_value.back().get())))) {
+            
+        if (current_func->functype == "void") {
+             auto ret = std::make_unique<ReturnIRValue>(ReturnIRValue::NUL);
+             ctx.current_block->ADD_Value(std::move(ret));
+        } else {
+             auto zero = std::make_unique<IntegerIRValue>(0);
+             auto ret = std::make_unique<ReturnIRValue>(ReturnIRValue::VALUE);
+             ret->return_value = std::move(zero);
+             ctx.current_block->ADD_Value(std::move(ret));
         }
     }
 }
@@ -960,6 +1059,45 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitUnaryExp(const UnaryExpAST* ast){
 
                 return std::move(temp_name);
             }
+        }
+    }
+    else if(ast->type == UnaryExpAST::FUNCVOID || ast->type == UnaryExpAST::FUNCRPARAMS) {
+        std::string func_name = ast->ident;
+        auto symbol = ctx.symbol_table->lookup(func_name);
+        if (!symbol || symbol->type != SymbolType::FUNCTION) {
+             throw std::runtime_error("Undefined function: " + func_name);
+        }
+        
+        auto call = std::make_unique<CallIRValue>();
+        call->func_name = symbol->ir_name;
+        
+        if (ast->type == UnaryExpAST::FUNCRPARAMS) {
+            if (auto params = dynamic_cast<const FuncRParamsAST*>(ast->funcrparams.get())) {
+                for (const auto& exp : params->explist) {
+                    if (auto e = dynamic_cast<const ExpAST*>(exp.get())) {
+                        auto arg_val = visitExp(e);
+                        if (!arg_val) {
+                            throw std::runtime_error("Failed to generate IR for function argument");
+                        }
+                        call->funcrparams.push_back(std::move(arg_val));
+                    }
+                }
+            }
+        }
+        
+        if (symbol->datatype == DataType::VOID) {
+            call->type = CallIRValue::VOID;
+            ctx.current_block->ADD_Value(std::move(call));
+            return nullptr;
+        } else {
+            call->type = CallIRValue::OTHER;
+            call->result_name = generate_temp_name();
+            
+            auto temp = std::make_unique<TemporaryIRValue>();
+            temp->temp_name = call->result_name;
+            
+            ctx.current_block->ADD_Value(std::move(call));
+            return std::move(temp);
         }
     }
     return nullptr;

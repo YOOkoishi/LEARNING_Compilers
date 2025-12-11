@@ -17,9 +17,24 @@ elif [ "$1" = "koopa" ] || [ "$1" = "riscv" ]; then
     if [ "$MODE" = "koopa" ]; then
         OUTPUT_FILE=${3:-"hello.koopa"}
         FLAG="-koopa"
+        CMD="./compiler $FLAG \"$INPUT_FILE\" -o \"$OUTPUT_FILE\" && echo 'Compilation finished. Output:' && cat \"$OUTPUT_FILE\""
     else
-        OUTPUT_FILE=${3:-"hello.riscv"}
+        # RISC-V 模式：编译 -> 链接 -> 运行
+        OUTPUT_FILE=${3:-"hello.s"}
+        EXE_FILE="hello" 
         FLAG="-riscv"
+        
+        # 库文件路径 (在 Docker 容器内的路径)
+        LIB_PATH="/root/compiler/sysy-runtime-lib/build"
+        
+        CMD="./compiler $FLAG \"$INPUT_FILE\" -o \"$OUTPUT_FILE\" && \
+             echo '--------------------------------' && \
+             echo '[1/3] Compile to RISC-V ASM finished.' && \
+             gcc \"$OUTPUT_FILE\" -L\"$LIB_PATH\" -lsysy -o \"$EXE_FILE\" && \
+             echo '[2/3] Link with libsysy.a finished.' && \
+             echo '[3/3] Running with QEMU:' && \
+             echo '--------------------------------' && \
+             qemu-riscv64 \"$EXE_FILE\" ; echo \"\nProgram returned: $?\""
     fi
 
     echo "Running in $MODE mode..."
@@ -31,9 +46,7 @@ elif [ "$1" = "koopa" ] || [ "$1" = "riscv" ]; then
         cmake -DCMAKE_BUILD_TYPE=Debug -B build > /dev/null &&
         cmake --build build > /dev/null &&
         cd build &&
-        ./compiler $FLAG \"$INPUT_FILE\" -o \"$OUTPUT_FILE\" &&
-        echo 'Compilation finished. Output:' &&
-        cat \"$OUTPUT_FILE\"
+        $CMD
     "
 
 else  

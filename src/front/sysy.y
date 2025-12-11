@@ -95,9 +95,20 @@ CompUnit
     comp_unit -> fun_def = unique_ptr<BaseAST>($1);
     $$ = comp_unit;
   }
+  | Decl {
+    auto comp_unit = new CompUnitAST(CompUnitAST::DECL);
+    comp_unit -> decl = unique_ptr<BaseAST>($1);
+    $$ = comp_unit;
+  }
   | CompUnit FuncDef {
     auto comp_unit = new CompUnitAST(CompUnitAST::COMPFUNC);
     comp_unit -> fun_def = unique_ptr<BaseAST>($2);
+    comp_unit -> compunit = unique_ptr<BaseAST>($1);
+    $$ = comp_unit;
+  }
+  | CompUnit Decl {
+    auto comp_unit = new CompUnitAST(CompUnitAST::COMPDECL);
+    comp_unit -> decl = unique_ptr<BaseAST>($2);
     comp_unit -> compunit = unique_ptr<BaseAST>($1);
     $$ = comp_unit;
   }
