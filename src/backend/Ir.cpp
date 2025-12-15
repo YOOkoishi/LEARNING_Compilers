@@ -290,8 +290,8 @@ void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
 
 
 void IRProgram::To_RiscV() const{
-    std::cout<<"  .text"<<std::endl;
     for(const auto &fun : ir_function){
+        std::cout<<"  .text"<<std::endl;
         fun -> To_RiscV();
     }
 }
@@ -301,6 +301,22 @@ void IRFunction::To_RiscV() const{
     GenContext ctx;
     GenContext::current_ctx = &ctx;
 
+    // 注册函数参数的映射
+    for (size_t i = 0; i < funcfparams.size(); ++i) {
+        if (i < 8) {
+            // 前8个参数通过寄存器 a0-a7 传递
+            ctx.stack.registerParam(funcfparams[i].first, i);
+        } else {
+            // 第9个及以后的参数通过栈传递
+            // 这些参数在调用者栈帧中，相对于当前 sp+frame_size 的偏移是 (i-8)*4
+            ctx.stack.registerStackParam(funcfparams[i].first, (i - 8) * 4);
+        }
+    }
+
+    // 第一遍扫描: 计算 S (局部变量), R (ra), A (传参)
+    bool has_call = false;
+    int max_args = 0;
+    
     for(const auto& block : ir_basicblock){
         for (const auto& value : block ->ir_value){
             if(auto* alloc = dynamic_cast<AllocIRValue*>(value.get())){
@@ -312,13 +328,31 @@ void IRFunction::To_RiscV() const{
             else if(auto* binary = dynamic_cast<BinaryIRValue*>(value.get())){
                 ctx.stack.allocate(binary->result_name);
             }
+            else if(auto* call = dynamic_cast<CallIRValue*>(value.get())){
+                has_call = true;
+                int args_count = call->funcrparams.size();
+                if (args_count > max_args) max_args = args_count;
+                // call 有返回值时也需要分配空间
+                if (call->type == CallIRValue::OTHER) {
+                    ctx.stack.allocate(call->result_name);
+                }
+            }
         }
     }
+    
+    // R: 如果有 call 则为 4, 否则为 0
+    int R = has_call ? 4 : 0;
+    ctx.stack.setR(R);
+    
+    // A: max(max_args - 8, 0) * 4
+    int A = (max_args > 8) ? (max_args - 8) * 4 : 0;
+    ctx.stack.setA(A);
+    
+    // 计算总栈帧大小 S' = (S + R + A) 向上取整到 16
+    ctx.stack.calculateFrameSize();
+    int frame_size = ctx.stack.getFrameSize();
 
-    int frame_size = ctx.stack.getAlignedSize();
-
-
-    //second time
+    // 生成 prologue
     std::string name = function_name;
     if (name.length() > 0 && name[0] == '@') {
         name = name.substr(1);
@@ -328,12 +362,16 @@ void IRFunction::To_RiscV() const{
 
     if(frame_size > 0){
         std::cout << "  addi sp, sp, -" << frame_size << std::endl;
+        // 如果 R != 0, 保存 ra 到 sp + S' - 4
+        if (R > 0) {
+            std::cout << "  sw ra, " << ctx.stack.getRaOffset() << "(sp)" << std::endl;
+        }
     }    
 
+    // 生成函数体
     for(const auto &block : ir_basicblock){
         block ->To_RiscV();
     }
-
 
     GenContext::current_ctx = nullptr;
 }
@@ -357,10 +395,9 @@ void IRBasicBlock::To_RiscV() const{
 
 
 void ReturnIRValue::To_RiscV() const{
+    auto& stack = GenContext::current_ctx->stack;
+    
     if(type == ReturnIRValue::VALUE){
-        
-        auto& stack = GenContext::current_ctx->stack;
-        
         if(auto int_val = dynamic_cast<IntegerIRValue*>(return_value.get())) {
             if(int_val->value == 0) {
                 std::cout << "  mv a0, x0" << std::endl;
@@ -371,19 +408,18 @@ void ReturnIRValue::To_RiscV() const{
             int offset = stack.getOffset(temp->temp_name);
             std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
         }
-        
-        // epilogue
-        int frame_size = stack.getAlignedSize();
-        if (frame_size > 0) {
-            std::cout << "  addi sp, sp, " << frame_size << std::endl;
-        }
-        std::cout << "  ret";
-
-    }
-    else {
-        std::cout << "  ret"<<std::endl;
     }
     
+    // epilogue: 恢复 ra (如果需要), 恢复 sp, 然后 ret
+    int frame_size = stack.getFrameSize();
+    if (frame_size > 0) {
+        // 如果 R != 0, 从栈恢复 ra
+        if (stack.getR() > 0) {
+            std::cout << "  lw ra, " << stack.getRaOffset() << "(sp)" << std::endl;
+        }
+        std::cout << "  addi sp, sp, " << frame_size << std::endl;
+    }
+    std::cout << "  ret";
 }
 
 
@@ -474,8 +510,23 @@ void StoreIRValue::To_RiscV() const{
         std::cout << "  li t0, " << int_val->value << std::endl;
     }
     else if (auto* temp = dynamic_cast<TemporaryIRValue*>(value.get())) {
-        int src_offset = stack.getOffset(temp->temp_name);
-        std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+        // 检查是否是寄存器参数 (前8个参数，从 a0-a7 读取)
+        int reg_num = stack.getParamReg(temp->temp_name);
+        if (reg_num >= 0) {
+            std::cout << "  mv t0, a" << reg_num << std::endl;
+        } else {
+            // 检查是否是栈上参数 (第9个及以后)
+            int stack_param_offset = stack.getStackParamOffset(temp->temp_name);
+            if (stack_param_offset >= 0) {
+                // 从调用者栈帧读取: sp + frame_size + stack_param_offset
+                int frame_size = stack.getFrameSize();
+                std::cout << "  lw t0, " << (frame_size + stack_param_offset) << "(sp)" << std::endl;
+            } else {
+                // 普通临时变量，从当前栈帧读取
+                int src_offset = stack.getOffset(temp->temp_name);
+                std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+            }
+        }
     }
     
     // 存入目标地址
@@ -525,19 +576,28 @@ void BranchIRValue::To_RiscV() const {
 
 
 void CallIRValue::To_RiscV() const {
+    auto& stack = GenContext::current_ctx->stack;
+    
     // 1. Prepare arguments
     for (size_t i = 0; i < funcrparams.size(); ++i) {
         if (i < 8) {
-            // Pass in a0-a7
+            // 前 8 个参数通过 a0-a7 传递
             if (auto* int_val = dynamic_cast<IntegerIRValue*>(funcrparams[i].get())) {
                 std::cout << "  li a" << i << ", " << int_val->value << std::endl;
             } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(funcrparams[i].get())) {
-                auto& stack = GenContext::current_ctx->stack;
                 int offset = stack.getOffset(temp->temp_name);
                 std::cout << "  lw a" << i << ", " << offset << "(sp)" << std::endl;
             }
         } else {
-            // Pass on stack (not implemented for now as per common requirements)
+            // 第 9 个及以后的参数通过栈传递
+            // 存放位置: sp + (i - 8) * 4
+            if (auto* int_val = dynamic_cast<IntegerIRValue*>(funcrparams[i].get())) {
+                std::cout << "  li t0, " << int_val->value << std::endl;
+            } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(funcrparams[i].get())) {
+                int offset = stack.getOffset(temp->temp_name);
+                std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+            }
+            std::cout << "  sw t0, " << (i - 8) * 4 << "(sp)" << std::endl;
         }
     }
     
@@ -548,7 +608,6 @@ void CallIRValue::To_RiscV() const {
     
     // 3. Handle return value
     if (type == OTHER) {
-        auto& stack = GenContext::current_ctx->stack;
         int offset = stack.getOffset(result_name);
         std::cout << "  sw a0, " << offset << "(sp)" << std::endl;
     }
