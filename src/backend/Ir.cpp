@@ -534,7 +534,6 @@ void AllocIRValue::To_RiscV() const{
 
 void StoreIRValue::To_RiscV() const{
     auto& stack = GenContext::current_ctx->stack;
-    int dest_offset = stack.getOffset(dest);
     
     // 把值加载到 t0
     if (auto* int_val = dynamic_cast<IntegerIRValue*>(value.get())) {
@@ -561,16 +560,32 @@ void StoreIRValue::To_RiscV() const{
     }
     
     // 存入目标地址
-    std::cout << "  sw t0, " << dest_offset << "(sp)";
+    // 检查是否是全局变量 (以 @ 开头)
+    if (dest.length() > 0 && dest[0] == '@') {
+        std::string name = dest.substr(1);
+        std::cout << "  la t1, " << name << std::endl;
+        std::cout << "  sw t0, 0(t1)";
+    } else {
+        int dest_offset = stack.getOffset(dest);
+        std::cout << "  sw t0, " << dest_offset << "(sp)";
+    }
 }
 
 
 void LoadIRValue::To_RiscV() const{
     auto& stack = GenContext::current_ctx->stack;
-    int src_offset = stack.getOffset(src);
     int dest_offset = stack.getOffset(result_name);
     
-    std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+    // 检查是否是全局变量 (以 @ 开头)
+    if (src.length() > 0 && src[0] == '@') {
+        std::string name = src.substr(1);
+        std::cout << "  la t0, " << name << std::endl;
+        std::cout << "  lw t0, 0(t0)" << std::endl;
+    } else {
+        int src_offset = stack.getOffset(src);
+        std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+    }
+    
     std::cout << "  sw t0, " << dest_offset << "(sp)";
 }
 
@@ -646,6 +661,18 @@ void CallIRValue::To_RiscV() const {
 
 
 void GlobalAllocIRValue::To_RiscV() const {
-    
+    std::string name = var_name;
+    if(name.length() > 0)name = name.substr(1);
+    std::cout<<"  .global "<< name <<std::endl;
+    std::cout<<name<<":"<<std::endl;
+    std::cout<<"  ";
+    if(auto val = dynamic_cast<IntegerIRValue*>(value.get())){
+        if(val->value == 0){
+            std::cout<<".zero 4"<<std::endl;
+        }
+        else{
+            std::cout<<".word "<<val->value<<std::endl;
+        }
+    }
 }
 

@@ -82,7 +82,8 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
             for(auto& i : funcfs ->funcflist){
                 if(auto funcf = dynamic_cast<FuncFParamAST*>(i.get())){
                     std::string param_name = funcf->ident;
-                    std::string ir_param_name = "@" + param_name; 
+                    // Use %arg_ prefix for parameters to avoid conflict with globals (@) and locals (%)
+                    std::string ir_param_name = "%arg_" + param_name; 
                     
                     ir_fun ->funcfparams.push_back({ir_param_name, "i32"});
                 }
@@ -109,7 +110,7 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
             for(auto& i : funcfs ->funcflist){
                 if(auto funcf = dynamic_cast<FuncFParamAST*>(i.get())){
                     std::string param_name = funcf->ident;
-                    std::string ir_param_name = "@" + param_name;
+                    std::string ir_param_name = "%arg_" + param_name;
                     
                     // Declare local var for param
                     std::string local_var = ctx.symbol_table->declare(param_name, SymbolType::VAR, DataType::INT);
@@ -750,7 +751,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast){
                 // A || B: if A is true, result is 1. Else result is B != 0.
                 
                 // 1. Allocate result variable
-                std::string result_var_name = "@or_res_" + std::to_string(blockcount++);
+                std::string result_var_name = "%or_res_" + std::to_string(blockcount++);
                 auto alloc = std::make_unique<AllocIRValue>(result_var_name, "i32");
                 ctx.current_block->ADD_Value(std::move(alloc));
 
@@ -857,7 +858,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast){
                 // A && B: if A is false, result is 0. Else result is B != 0.
 
                 // 1. Allocate result variable
-                std::string result_var_name = "@and_res_" + std::to_string(blockcount++);
+                std::string result_var_name = "%and_res_" + std::to_string(blockcount++);
                 auto alloc = std::make_unique<AllocIRValue>(result_var_name, "i32");
                 ctx.current_block->ADD_Value(std::move(alloc));
 
