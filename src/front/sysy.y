@@ -27,6 +27,8 @@ using namespace std;
 
 %}
 
+// 使用 GLR 解析器处理语法冲突
+%glr-parser
 
 %define parse.error verbose
 

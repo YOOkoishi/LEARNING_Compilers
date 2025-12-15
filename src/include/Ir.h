@@ -103,6 +103,26 @@ public:
 };
 
 
+class GlobalAllocIRValue : public BaseIRValue {
+public:
+
+    std::unique_ptr<BaseIRValue> value;
+    std::string var_name;
+    std::string type;
+
+    GlobalAllocIRValue() = default;
+    GlobalAllocIRValue(std::unique_ptr<BaseIRValue> v,const std::string& d,const std::string& ty) : value(std::move(v)), var_name(d),type(ty) {};
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
+
+
+
+
+
 class StoreIRValue : public BaseIRValue{
 public:
     std::unique_ptr<BaseIRValue> value;  // 要存储的值
@@ -247,9 +267,10 @@ public:
 
 class IRProgram {
 public:
-    std::vector<std::unique_ptr<BaseIRValue>> golbal_value;
+    std::vector<std::unique_ptr<BaseIRValue>> global_value;
     std::vector<std::unique_ptr<IRFunction>> ir_function;
     void ADD_Function(std::unique_ptr<IRFunction> func);
+    void ADD_Globalvalue(std::unique_ptr<BaseIRValue> val); 
     void DumpFunction() const;
     void To_RiscV() const;
 };

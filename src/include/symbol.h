@@ -114,4 +114,9 @@ public:
             }
         }
     }
+
+
+    bool isGlobalScope() const {
+        return current_scope_level == 0;
+    }
 };

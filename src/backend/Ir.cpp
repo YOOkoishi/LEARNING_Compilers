@@ -212,6 +212,21 @@ void CallIRValue::Dump() const {
 
 
 
+void GlobalAllocIRValue::Dump() const {
+    std::cout<<"global "<<var_name<<" = "<<"alloc "<<type<<", ";
+    if(auto val =dynamic_cast<IntegerIRValue*>(value.get())){
+        if(val ->value == 0){
+            std::cout<<"zeroinit"<<std::endl;
+        }
+        else{
+            std::cout<<val ->value<<std::endl;
+        }
+    }
+}
+
+
+
+
 
 void BranchIRValue::Dump() const {
     std::cout << "  br ";
@@ -255,6 +270,14 @@ void IRProgram::DumpFunction() const{
     std::cout << "decl @stoptime()" << std::endl;
     std::cout << std::endl;
 
+    for(const auto &gv : global_value){
+        gv -> Dump();
+    }
+    
+    if(!global_value.empty()){
+        std::cout<<std::endl;
+    }
+
     for(const auto &fun : ir_function){
         fun -> DumpBlock();
     }
@@ -281,7 +304,9 @@ void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
 }
 
 
-
+void IRProgram::ADD_Globalvalue(std::unique_ptr<BaseIRValue> val){
+    global_value.push_back(std::move(val));
+}
 
 // 各类型IR的To_RiscV() 函数定义
 
@@ -290,6 +315,12 @@ void IRProgram::ADD_Function(std::unique_ptr<IRFunction> func){
 
 
 void IRProgram::To_RiscV() const{
+    for(const auto &gv : global_value){
+        std::cout<<"  .data"<<std::endl;
+        gv ->To_RiscV();
+    }
+    
+
     for(const auto &fun : ir_function){
         std::cout<<"  .text"<<std::endl;
         fun -> To_RiscV();
@@ -614,5 +645,7 @@ void CallIRValue::To_RiscV() const {
 }
 
 
-
+void GlobalAllocIRValue::To_RiscV() const {
+    
+}
 

@@ -621,6 +621,8 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
 
     std::string var_name;
 
+    bool is_global = ctx.symbol_table->isGlobalScope();
+
     if(ast ->type == VarDefAST::IDENT){
         try
         {
@@ -635,9 +637,20 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             std::cerr << "Error in variable declaration" << e.what() << '\n';
         }
         
-        // only allocIR
-        auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
-        ctx.current_block ->ADD_Value(std::move(alloc));
+
+        if(is_global){
+            auto zero_init = std::make_unique<IntegerIRValue>(0);
+            auto global_alloc = std::make_unique<GlobalAllocIRValue>(
+                std::move(zero_init) , var_name , "i32"
+            );
+
+            ctx.program->ADD_Globalvalue(std::move(global_alloc));
+        }   
+        else {
+            // only allocIR
+            auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+            ctx.current_block ->ADD_Value(std::move(alloc));
+        }     
 
     }
     else if(ast ->type == VarDefAST::IDENTDEF){
@@ -653,21 +666,38 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
         {
             std::cerr << "Error in variable declaration" << e.what() << '\n';
         }
+        if(is_global){
 
-        // allocIR
-        auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+            int init_value = 0;
+            if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
+                init_value = evaluateConstExp(initval->exp.get());
+            }
 
-        ctx.current_block ->ADD_Value(std::move(alloc));    
-        
-        
-        //storeIR 
+            auto init_ir = std::make_unique<IntegerIRValue>(init_value);            
 
-        if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
-            if(auto exp = dynamic_cast<ExpAST*>(initval ->exp.get())){
-                auto var_value = visitExp(exp);
-                auto store = std::make_unique<StoreIRValue>(std::move(var_value),var_name);
 
-                ctx.current_block->ADD_Value(std::move(store));
+            auto global_alloc = std::make_unique<GlobalAllocIRValue>(
+                std::move(init_ir),var_name,"i32"
+            );
+
+            ctx.program->ADD_Globalvalue(std::move(global_alloc));
+        }
+        else{
+            // allocIR
+            auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+    
+            ctx.current_block ->ADD_Value(std::move(alloc));    
+            
+            
+            //storeIR 
+    
+            if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
+                if(auto exp = dynamic_cast<ExpAST*>(initval ->exp.get())){
+                    auto var_value = visitExp(exp);
+                    auto store = std::make_unique<StoreIRValue>(std::move(var_value),var_name);
+    
+                    ctx.current_block->ADD_Value(std::move(store));
+                }
             }
         }
     }
@@ -716,44 +746,96 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLOrExp(const LOrExpAST* ast){
     else if(ast -> type == LOrExpAST::LORLAND){
         if(auto lor = dynamic_cast<LOrExpAST*>(ast -> lorexp.get())){
             if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
-                auto orval = std::make_unique<BinaryIRValue>();
+                // Short-circuit evaluation for OR (||)
+                // A || B: if A is true, result is 1. Else result is B != 0.
+                
+                // 1. Allocate result variable
+                std::string result_var_name = "@or_res_" + std::to_string(blockcount++);
+                auto alloc = std::make_unique<AllocIRValue>(result_var_name, "i32");
+                ctx.current_block->ADD_Value(std::move(alloc));
 
-                auto ltp = std::make_unique<BinaryIRValue>();
-                ltp -> left = visitLOrExp(lor);
-                ltp -> right = std::make_unique<IntegerIRValue>(0);
-                ltp -> operation = BinaryIRValue::NE;
-                ltp -> result_name = generate_temp_name();
+                // 2. Evaluate Left
+                auto left_val = visitLOrExp(lor);
+                
+                // Check Left != 0
+                auto l_ne = std::make_unique<BinaryIRValue>();
+                l_ne->operation = BinaryIRValue::NE;
+                l_ne->left = std::move(left_val);
+                l_ne->right = std::make_unique<IntegerIRValue>(0);
+                l_ne->result_name = generate_temp_name();
+                auto l_cond_name = l_ne->result_name;
+                ctx.current_block->ADD_Value(std::move(l_ne));
+                
+                auto l_cond_val = std::make_unique<TemporaryIRValue>();
+                l_cond_val->temp_name = l_cond_name;
 
-                auto tp_left = std::make_unique<TemporaryIRValue>();
-                tp_left -> temp_name = ltp ->result_name;
+                // 3. Create Blocks
+                auto true_block = std::make_unique<IRBasicBlock>();
+                true_block->block_name = "%or_true_" + std::to_string(blockcount++);
+                std::string true_label = true_block->block_name;
 
-                ctx.current_block->ADD_Value(std::move(ltp));
+                auto false_block = std::make_unique<IRBasicBlock>();
+                false_block->block_name = "%or_false_" + std::to_string(blockcount++);
+                std::string false_label = false_block->block_name;
 
+                auto end_block = std::make_unique<IRBasicBlock>();
+                end_block->block_name = "%or_end_" + std::to_string(blockcount++);
+                std::string end_label = end_block->block_name;
 
-                auto rtp = std::make_unique<BinaryIRValue>();
-                rtp -> left = visitLAndExp(land);
-                rtp -> right = std::make_unique<IntegerIRValue>(0);
-                rtp -> operation = BinaryIRValue::NE;
-                rtp -> result_name = generate_temp_name();
+                // 4. Branch
+                auto br = std::make_unique<BranchIRValue>(std::move(l_cond_val), true_label, false_label);
+                ctx.current_block->ADD_Value(std::move(br));
 
-                auto tp_right = std::make_unique<TemporaryIRValue>();
-                tp_right -> temp_name = rtp ->result_name;
+                auto current_func = ctx.program->ir_function.back().get();
 
-                ctx.current_block->ADD_Value(std::move(rtp));
+                // 5. True Block (Short Circuit -> 1)
+                current_func->ADD_Block(std::move(true_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
+                
+                auto store_true = std::make_unique<StoreIRValue>(std::make_unique<IntegerIRValue>(1), result_var_name);
+                ctx.current_block->ADD_Value(std::move(store_true));
+                
+                auto jump_end1 = std::make_unique<JumpIRValue>(end_label);
+                ctx.current_block->ADD_Value(std::move(jump_end1));
 
+                // 6. False Block (Evaluate Right)
+                current_func->ADD_Block(std::move(false_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
 
+                auto right_val = visitLAndExp(land);
+                
+                // Check Right != 0
+                auto r_ne = std::make_unique<BinaryIRValue>();
+                r_ne->operation = BinaryIRValue::NE;
+                r_ne->left = std::move(right_val);
+                r_ne->right = std::make_unique<IntegerIRValue>(0);
+                r_ne->result_name = generate_temp_name();
+                auto r_cond_name = r_ne->result_name;
+                ctx.current_block->ADD_Value(std::move(r_ne));
 
-                orval -> left = std::move(tp_left);
-                orval -> right = std::move(tp_right);
-                orval -> operation = BinaryIRValue::OR;
-                orval -> result_name = generate_temp_name();
+                auto r_cond_val = std::make_unique<TemporaryIRValue>();
+                r_cond_val->temp_name = r_cond_name;
 
-                auto temp_name = std::make_unique<TemporaryIRValue>();
-                temp_name ->temp_name = orval -> result_name;
+                auto store_right = std::make_unique<StoreIRValue>(std::move(r_cond_val), result_var_name);
+                ctx.current_block->ADD_Value(std::move(store_right));
 
-                ctx.current_block->ADD_Value(std::move(orval));
+                auto jump_end2 = std::make_unique<JumpIRValue>(end_label);
+                ctx.current_block->ADD_Value(std::move(jump_end2));
 
-                return std::move(temp_name);
+                // 7. End Block
+                current_func->ADD_Block(std::move(end_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
+
+                auto load_res = std::make_unique<LoadIRValue>();
+                load_res->result_name = generate_temp_name();
+                load_res->src = result_var_name;
+                
+                auto result_val = std::make_unique<TemporaryIRValue>();
+                result_val->temp_name = load_res->result_name;
+                
+                ctx.current_block->ADD_Value(std::move(load_res));
+
+                return std::move(result_val);
             }
         }
     }
@@ -771,44 +853,96 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitLAndExp(const LAndExpAST* ast){
     else if(ast -> type == LAndExpAST::LANDEQ){
         if(auto land = dynamic_cast<LAndExpAST*>(ast -> landexp.get())){
             if(auto eq = dynamic_cast<EqExpAST*>(ast -> eqexp.get())){
-                auto andval = std::make_unique<BinaryIRValue>();
+                // Short-circuit evaluation for AND (&&)
+                // A && B: if A is false, result is 0. Else result is B != 0.
 
-                auto ltp = std::make_unique<BinaryIRValue>();
-                ltp -> left = visitLAndExp(land);
-                ltp -> right = std::make_unique<IntegerIRValue>(0);
-                ltp -> operation = BinaryIRValue::NE;
-                ltp -> result_name = generate_temp_name();
+                // 1. Allocate result variable
+                std::string result_var_name = "@and_res_" + std::to_string(blockcount++);
+                auto alloc = std::make_unique<AllocIRValue>(result_var_name, "i32");
+                ctx.current_block->ADD_Value(std::move(alloc));
 
-                auto tp_left = std::make_unique<TemporaryIRValue>();
-                tp_left -> temp_name = ltp ->result_name;
+                // 2. Evaluate Left
+                auto left_val = visitLAndExp(land);
+                
+                // Check Left != 0
+                auto l_ne = std::make_unique<BinaryIRValue>();
+                l_ne->operation = BinaryIRValue::NE;
+                l_ne->left = std::move(left_val);
+                l_ne->right = std::make_unique<IntegerIRValue>(0);
+                l_ne->result_name = generate_temp_name();
+                auto l_cond_name = l_ne->result_name;
+                ctx.current_block->ADD_Value(std::move(l_ne));
+                
+                auto l_cond_val = std::make_unique<TemporaryIRValue>();
+                l_cond_val->temp_name = l_cond_name;
 
-                ctx.current_block->ADD_Value(std::move(ltp));
+                // 3. Create Blocks
+                auto true_block = std::make_unique<IRBasicBlock>();
+                true_block->block_name = "%and_true_" + std::to_string(blockcount++);
+                std::string true_label = true_block->block_name;
 
+                auto false_block = std::make_unique<IRBasicBlock>();
+                false_block->block_name = "%and_false_" + std::to_string(blockcount++);
+                std::string false_label = false_block->block_name;
 
-                auto rtp = std::make_unique<BinaryIRValue>();
-                rtp -> left = visitEqExp(eq);
-                rtp -> right = std::make_unique<IntegerIRValue>(0);
-                rtp -> operation = BinaryIRValue::NE;
-                rtp -> result_name = generate_temp_name();
+                auto end_block = std::make_unique<IRBasicBlock>();
+                end_block->block_name = "%and_end_" + std::to_string(blockcount++);
+                std::string end_label = end_block->block_name;
 
-                auto tp_right = std::make_unique<TemporaryIRValue>();
-                tp_right -> temp_name = rtp ->result_name;
+                // 4. Branch
+                auto br = std::make_unique<BranchIRValue>(std::move(l_cond_val), true_label, false_label);
+                ctx.current_block->ADD_Value(std::move(br));
 
-                ctx.current_block->ADD_Value(std::move(rtp));
+                auto current_func = ctx.program->ir_function.back().get();
 
+                // 5. False Block (Short Circuit -> 0)
+                current_func->ADD_Block(std::move(false_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
+                
+                auto store_false = std::make_unique<StoreIRValue>(std::make_unique<IntegerIRValue>(0), result_var_name);
+                ctx.current_block->ADD_Value(std::move(store_false));
+                
+                auto jump_end1 = std::make_unique<JumpIRValue>(end_label);
+                ctx.current_block->ADD_Value(std::move(jump_end1));
 
+                // 6. True Block (Evaluate Right)
+                current_func->ADD_Block(std::move(true_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
 
-                andval -> right = std::move(tp_left);
-                andval -> left = std::move(tp_right);
-                andval -> operation = BinaryIRValue::AND;
-                andval -> result_name = generate_temp_name();
+                auto right_val = visitEqExp(eq);
+                
+                // Check Right != 0
+                auto r_ne = std::make_unique<BinaryIRValue>();
+                r_ne->operation = BinaryIRValue::NE;
+                r_ne->left = std::move(right_val);
+                r_ne->right = std::make_unique<IntegerIRValue>(0);
+                r_ne->result_name = generate_temp_name();
+                auto r_cond_name = r_ne->result_name;
+                ctx.current_block->ADD_Value(std::move(r_ne));
 
-                auto temp_name = std::make_unique<TemporaryIRValue>();
-                temp_name ->temp_name = andval -> result_name;
+                auto r_cond_val = std::make_unique<TemporaryIRValue>();
+                r_cond_val->temp_name = r_cond_name;
 
-                ctx.current_block->ADD_Value(std::move(andval));
+                auto store_right = std::make_unique<StoreIRValue>(std::move(r_cond_val), result_var_name);
+                ctx.current_block->ADD_Value(std::move(store_right));
 
-                return std::move(temp_name);
+                auto jump_end2 = std::make_unique<JumpIRValue>(end_label);
+                ctx.current_block->ADD_Value(std::move(jump_end2));
+
+                // 7. End Block
+                current_func->ADD_Block(std::move(end_block));
+                setCurrentBlock(current_func->ir_basicblock.back().get());
+
+                auto load_res = std::make_unique<LoadIRValue>();
+                load_res->result_name = generate_temp_name();
+                load_res->src = result_var_name;
+                
+                auto result_val = std::make_unique<TemporaryIRValue>();
+                result_val->temp_name = load_res->result_name;
+                
+                ctx.current_block->ADD_Value(std::move(load_res));
+
+                return std::move(result_val);
             }
         }
     }
@@ -1323,3 +1457,4 @@ int IRGenerator::evaluateConstExp(const BaseAST* ast) {
     
     throw std::runtime_error("Cannot evaluate constant expression");
 }
+
