@@ -345,8 +345,17 @@ public:
 
 class ConstDefAST : public BaseAST {
 public:
+    enum Type {
+        CONST,
+        ARRAY
+    } type;
 
+
+    ConstDefAST() = default;
+    ConstDefAST(Type t): type(t){};
+    
     std::string ident;
+    std::unique_ptr<BaseAST> constexp;
     std::unique_ptr<BaseAST> constinitval;
     void Dump() const override;
     

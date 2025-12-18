@@ -343,6 +343,10 @@ ConstDef
   $$ = constdef;    
 
   }
+  | IDENT '[' ConstExp ']' '=' ConstInitVal {
+  auto constdef = new ConstDefAST()
+
+  }
   ;
 
 
