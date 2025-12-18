@@ -1,0 +1,40 @@
+name: Compiler AutoTest
+
+on:
+  push:
+    branches: [ "main", "LV8" ]
+  pull_request:
+    branches: [ "main", "LV8" ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    container: maxxing/compiler-dev
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Build Runtime Library
+      run: |
+        cd sysy-runtime-lib
+        make
+        cd ..
+
+    - name: Build Compiler
+      run: |
+        cmake -DCMAKE_BUILD_TYPE=Debug -B build
+        cmake --build build
+
+    - name: Run Koopa Tests
+      run: |
+        # 对应 ./run.sh test -koopa
+        # autotest -koopa -s "" [project_root]
+        autotest -koopa -s "" .
+
+    - name: Run RISC-V Tests
+      run: |
+        # 对应 ./run.sh test -riscv
+        # autotest -riscv -s "" [project_root]
+        autotest -riscv -s "" .
