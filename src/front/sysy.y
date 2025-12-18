@@ -28,7 +28,7 @@ using namespace std;
 %}
 
 // 使用 GLR 解析器处理语法冲突
-%glr-parser
+// %glr-parser
 
 %define parse.error verbose
 
@@ -70,7 +70,7 @@ using namespace std;
 %left '*' '/' '%'
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number CompUnit
+%type <ast_val> FuncDef Block Stmt Number CompUnit
 %type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp ConstExp
 %type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval ConstDefs BType
 %type <ast_val> VarDecl VarDef VarDefs InitVal FuncFParams FuncFParam FuncRParams 
@@ -118,21 +118,40 @@ CompUnit
 
 
 FuncDef
-  : FuncType IDENT '(' ')' Block {
+  : BType IDENT '(' ')' Block {
     auto ast = new FunDefAST(FunDefAST::NOFUNCF);
-    ast -> fun_type = unique_ptr<BaseAST>($1);
+    auto fun_type = new FunTypeAST(FunTypeAST::INT);
+    ast -> fun_type = unique_ptr<BaseAST>(fun_type);
     ast -> ident = *unique_ptr<string>($2);
     ast -> block = unique_ptr<BaseAST>($5);
     $$ = ast;
   } 
-  | FuncType IDENT '(' FuncFParams ')' Block {
+  | BType IDENT '(' FuncFParams ')' Block {
     auto ast = new FunDefAST(FunDefAST::FUNCF);
-    ast -> fun_type = unique_ptr<BaseAST>($1);
+    auto fun_type = new FunTypeAST(FunTypeAST::INT);
+    ast -> fun_type = unique_ptr<BaseAST>(fun_type);
     ast -> ident = *unique_ptr<string>($2);
     ast -> funcfparams = unique_ptr<BaseAST>($4);
     ast -> block = unique_ptr<BaseAST>($6);
     $$ = ast;
+  }
+  | VOID IDENT '(' ')' Block {
+    auto ast = new FunDefAST(FunDefAST::NOFUNCF);
+    auto fun_type = new FunTypeAST(FunTypeAST::VOID);
+    ast -> fun_type = unique_ptr<BaseAST>(fun_type);
+    ast -> ident = *unique_ptr<string>($2);
+    ast -> block = unique_ptr<BaseAST>($5);
+    $$ = ast;
   } 
+  | VOID IDENT '(' FuncFParams ')' Block {
+    auto ast = new FunDefAST(FunDefAST::FUNCF);
+    auto fun_type = new FunTypeAST(FunTypeAST::VOID);
+    ast -> fun_type = unique_ptr<BaseAST>(fun_type);
+    ast -> ident = *unique_ptr<string>($2);
+    ast -> funcfparams = unique_ptr<BaseAST>($4);
+    ast -> block = unique_ptr<BaseAST>($6);
+    $$ = ast;
+  }
   ;
 
 
@@ -163,19 +182,6 @@ FuncFParam
 
 
 
-
-
-FuncType
-  : INT {
-    auto ast = new FunTypeAST(FunTypeAST::INT);
-    $$ = ast;
-
-  }
-  | VOID {
-    auto ast = new FunTypeAST(FunTypeAST::VOID);
-    $$ = ast;
-  }
-  ;
 
 
 Block
