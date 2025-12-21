@@ -364,9 +364,34 @@ public:
 
 class ConstInitValAST : public BaseAST {
 public:
+    enum Type {
+        CONSTEXP,
+        CONSTLIST,
+        ZEROINIT
+    }type;
+
+    ConstInitValAST() =default;
+    ConstInitValAST(Type t) : type(t){};
+    std::unique_ptr<BaseAST> constlist;
     std::unique_ptr<BaseAST> constexp;
     void Dump() const override;
 };
+
+
+
+class ConstExpListAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> constexplist;
+    void Dump() const override;
+};
+
+
+class ExpListAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> explist;
+    void Dump() const override;
+};
+
 
 
 class ConstExpAST : public BaseAST {
@@ -378,7 +403,16 @@ public:
 
 class LValAST : public BaseAST {
 public:
+    enum Type{
+        VAR,
+        ARRAY
+    } type;
+
+    LValAST() = default;
+    LValAST(Type t) : type(t){};
+     
     std::string ident;
+    std::unique_ptr<BaseAST> address;
     void Dump() const override;
 };
 
@@ -407,13 +441,17 @@ class VarDefAST : public BaseAST {
 public:
     enum Type {
         IDENT,
-        IDENTDEF
+        IDENTDEF,
+        ARRAY,
+        ARRAYDEF
     } type;
 
     VarDefAST(Type t) : type( t) {};
     VarDefAST() {};
+
     std::string ident;
     std::unique_ptr<BaseAST> initval;
+    std::unique_ptr<BaseAST> constexp;
 
     void Dump() const override;
 };
@@ -423,7 +461,19 @@ public:
 
 class InitValAST : public BaseAST {
 public:
+    enum Type {
+        EXP,
+        ARRAY,
+        ZEROINIT
+    } type;
+
+
+    InitValAST() = default;
+    InitValAST(Type t): type(t) {};
+
+
     std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> explist;
 
     void Dump() const override;
 };

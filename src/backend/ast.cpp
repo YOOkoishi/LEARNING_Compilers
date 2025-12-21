@@ -344,4 +344,11 @@ void InitValAST :: Dump() const{
 }
 
 
+void ExpListAST :: Dump() const {
+    
+}
+
+void ConstExpListAST :: Dump() const {
+
+}
 
