@@ -685,18 +685,39 @@ void CallIRValue::To_RiscV() const {
 
 
 void GlobalAllocIRValue::To_RiscV() const {
-    std::string name = var_name;
-    if(name.length() > 0)name = name.substr(1);
-    std::cout<<"  .global "<< name <<std::endl;
-    std::cout<<name<<":"<<std::endl;
-    std::cout<<"  ";
-    if(auto val = dynamic_cast<IntegerIRValue*>(value.get())){
-        if(val->value == 0){
-            std::cout<<".zero 4"<<std::endl;
+    if(type == VAR){
+        std::string name = var_name;
+        if(name.length() > 0)name = name.substr(1);
+        std::cout<<"  .global "<< name <<std::endl;
+        std::cout<<name<<":"<<std::endl;
+        std::cout<<"  ";
+        if(auto val = dynamic_cast<IntegerIRValue*>(value.get())){
+            if(val->value == 0){
+                std::cout<<".zero 4"<<std::endl;
+            }
+            else{
+                std::cout<<".word "<<val->value<<std::endl;
+            }
         }
-        else{
-            std::cout<<".word "<<val->value<<std::endl;
+    }    
+    else {
+        std::string name = var_name;
+        if(name.length() > 0)name = name.substr(1);
+        std::cout<<"  .global "<< name <<std::endl;
+        std::cout<<name<<":"<<std::endl;
+        std::cout<<"  ";
+        int temp_cnt = 0;
+        for(auto i : init_list){
+            if(auto val = dynamic_cast<IntegerIRValue*>(value.get())){
+                if(val->value == ){
+                    std::cout<<".zero 4"<<std::endl;
+                }
+                else{
+                    std::cout<<".word "<<val->value<<std::endl;
+                }
+            }
         }
+
     }
 }
 
