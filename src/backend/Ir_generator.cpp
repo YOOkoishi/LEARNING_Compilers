@@ -116,7 +116,7 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
                     std::string local_var = ctx.symbol_table->declare(param_name, SymbolType::VAR, DataType::INT);
                     
                     // Alloc
-                    auto alloc = std::make_unique<AllocIRValue>(local_var, "i32");
+                    auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR ,local_var, "i32");
                     ctx.current_block->ADD_Value(std::move(alloc));
                     
                     // Store
@@ -549,36 +549,49 @@ void IRGenerator::visitConstDefs(const ConstDefsAST* ast){
 
 void IRGenerator::visitConstDef(const ConstDefAST* ast){
     if(!ast) return ;
+    if(ast ->type == ConstDefAST::CONST){
+        int cosnt_value = evaluateConstExp(ast->constinitval.get());
     
-    int cosnt_value = evaluateConstExp(ast->constinitval.get());
+        try
+        {
+            ctx.symbol_table->declare(
+                ast->ident,
+                SymbolType::CONST,
+                DataType::INT,
+                cosnt_value
+            );
+        }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << "Error in constant declaration" << e.what() << '\n';
+        }
 
-    try
-    {
-        ctx.symbol_table->declare(
-            ast->ident,
-            SymbolType::CONST,
-            DataType::INT,
-            cosnt_value
-        );
     }
-    catch(const std::runtime_error& e)
-    {
-        std::cerr << "Error in constant declaration" << e.what() << '\n';
+    else if(ast -> type == ConstDefAST::ARRAY){
+        int array_size = evaluateConstExp(ast ->constexp.get());
+        auto initval = visitConstInitVal(dynamic_cast<ConstInitValAST*>( ast -> constinitval.get()));
+         
+
+
     }
-    
+}
+
+
+
+std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast){
+    if(!ast) return;
+    if(ast -> type ==  ConstInitValAST::CONSTLIST){
+        std::vector<int> init_list;
+        if(auto constlist = dynamic_cast<ConstExpListAST*>(ast->constlist.get())){
+            for(const auto &constexp : constlist->constexplist){
+                init_list.push_back(evaluateConstExp(constexp.get()));
+            }
+        }
+    }
 
 }
 
 /*
-
-void IRGenerator::visitConstInitVal(const ConstInitValAST* ast){
-    if(!ast) return;
-    if(auto constexp = dynamic_cast<ConstExpAST*>(ast->constexp.get())){
-        visitConstExp(constexp);
-    }
-}
-
-
 
 std::unique_ptr<BaseIRValue> IRGenerator::visitConstExp(const ConstExpAST* ast){
     
@@ -642,14 +655,14 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
         if(is_global){
             auto zero_init = std::make_unique<IntegerIRValue>(0);
             auto global_alloc = std::make_unique<GlobalAllocIRValue>(
-                std::move(zero_init) , var_name , "i32"
+                GlobalAllocIRValue::VAR,std::move(zero_init) , var_name , "i32"
             );
 
             ctx.program->ADD_Globalvalue(std::move(global_alloc));
         }   
         else {
             // only allocIR
-            auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+            auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR,var_name,"i32");
             ctx.current_block ->ADD_Value(std::move(alloc));
         }     
 
@@ -678,14 +691,14 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
 
 
             auto global_alloc = std::make_unique<GlobalAllocIRValue>(
-                std::move(init_ir),var_name,"i32"
+                GlobalAllocIRValue::VAR, std::move(init_ir),var_name,"i32"
             );
 
             ctx.program->ADD_Globalvalue(std::move(global_alloc));
         }
         else{
             // allocIR
-            auto alloc = std::make_unique<AllocIRValue>(var_name,"i32");
+            auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR,var_name,"i32");
     
             ctx.current_block ->ADD_Value(std::move(alloc));    
             

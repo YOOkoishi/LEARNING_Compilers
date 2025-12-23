@@ -92,26 +92,40 @@ public:
 
 class AllocIRValue : public BaseIRValue{
 public:
-    std::string var_name;
-    std::string type;
+    enum Type {
+        VAR,
+        ARRAY
+    } type;
 
-    AllocIRValue(const std::string& name, const std::string& t): var_name(name),type(t){};
-    AllocIRValue(){};
+    std::string var_name;
+    std::string data_type;
+    int size;
+
+    AllocIRValue(Type t,const std::string& name, const std::string& ty):type(t), var_name(name),data_type(ty){};
+    AllocIRValue(const std::string& name, const std::string& ty): var_name(name),data_type(ty){type = VAR;};
+    AllocIRValue() = default;
 
     void Dump() const override;
     void To_RiscV() const override;
 };
+
+
 
 
 class GlobalAllocIRValue : public BaseIRValue {
 public:
+    enum Type {
+        VAR,
+        ARRAY
+    } type;
 
+    std::vector<int> init_list; 
     std::unique_ptr<BaseIRValue> value;
     std::string var_name;
-    std::string type;
+    std::string data_type;
 
     GlobalAllocIRValue() = default;
-    GlobalAllocIRValue(std::unique_ptr<BaseIRValue> v,const std::string& d,const std::string& ty) : value(std::move(v)), var_name(d),type(ty) {};
+    GlobalAllocIRValue(Type t,std::unique_ptr<BaseIRValue> v,const std::string& d,const std::string& ty) :type(t), value(std::move(v)), var_name(d),data_type(ty) {};
 
     void Dump() const override;
     void To_RiscV() const override;
@@ -119,6 +133,21 @@ public:
 
 
 
+class GetElemPtrIRValue : public BaseIRValue {
+public :
+
+    std::string result_name;
+    std::string  src;
+    std::unique_ptr<BaseIRValue> index;
+
+    GetElemPtrIRValue() = default;
+    GetElemPtrIRValue(const std::string& r,const std::string& s,std::unique_ptr<BaseIRValue> i): result_name(r),src(s),index(std::move(i)) {};
+    
+
+    void Dump() const override;
+    void To_RiscV() const override;
+
+};
 
 
 

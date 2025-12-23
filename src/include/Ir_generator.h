@@ -150,12 +150,15 @@ public:
     void visitConstDecl(const ConstDeclAST* ast);
     void visitConstDefs(const ConstDefsAST* ast);
     void visitConstDef(const ConstDefAST* ast);
-    void visitConstInitVal(const ConstInitValAST* ast);
+    std::vector<int> visitConstInitVal(const ConstInitValAST* ast,int array_size);
+    std::vector<int> visitConstList(const ConstExpListAST* ast,int array_size); 
     void visitVarDecl(const VarDeclAST* ast);
     void visitVarDefs(const VarDefsAST* ast);
     void visitVarDef(const VarDefAST* ast);
     void visitInitValAST(const InitValAST* ast);
     
+
+
     std::unique_ptr<BaseIRValue> visitExp(const ExpAST* ast );
     std::unique_ptr<BaseIRValue> visitAddExp(const AddExpAST* ast );
     std::unique_ptr<BaseIRValue> visitMulExp(const MulExpAST* ast );

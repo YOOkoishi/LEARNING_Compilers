@@ -24,7 +24,19 @@ public:
     DataType datatype;
     int scope_level;
     int const_value;
-    
+    std::vector<int> array_dims;
+    std::vector<int> const_array_values;
+
+    int get_const_array_value(int flat_index){
+        if(type == SymbolType::CONST && datatype == DataType::ARRAY){
+            if(flat_index < const_array_values.size()){
+                return const_array_values[flat_index];
+            }
+        }
+        return 0;
+    }
+
+
     Symbol() = default;
     Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, int val = 0)
         : name(n), ir_name(ir), type(t), datatype(dt), scope_level(lvl), const_value(val) {}
@@ -51,7 +63,7 @@ public:
     void enterScope() {
         symbol_table.push_back(std::map<std::string, std::shared_ptr<Symbol>>());
         current_scope_level++;
-    }
+    } 
     
     // 离开作用域
     void exitScope() {
@@ -59,7 +71,7 @@ public:
             symbol_table.pop_back();
             current_scope_level--;
         }
-    }
+    } 
     
     // 生成唯一的 IR 名称
     std::string generateIRName(const std::string& name) {
