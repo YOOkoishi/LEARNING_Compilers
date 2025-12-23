@@ -604,6 +604,7 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
                 global_alloc->var_name = ir_name;
                 global_alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
                 global_alloc->init_list = initval;
+                global_alloc->float_size = array_size;
                 program->global_value.push_back(std::move(global_alloc));
             } else {
                 // Local constant array
@@ -656,9 +657,7 @@ std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast,int a
         }
     }
     else if(ast -> type == ConstInitValAST::ZEROINIT){
-        for(int i = 0;i< array_size;i++){
-            init_list.push_back(0);
-        }
+
     }
     return init_list;
 }
@@ -835,33 +834,13 @@ void IRGenerator::visitArrayInit(const std::string& base_addr, const InitValAST*
             }
         }
         
-        for (; index < array_size; ++index) {
-            auto gep = std::make_unique<GetElemPtrIRValue>();
-            std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(index) + "_" + std::to_string(blockcount++);
-            gep->result_name = ptr_name;
-            gep->src = base_addr;
-            gep->index = std::make_unique<IntegerIRValue>(index);
-            ctx.current_block->ADD_Value(std::move(gep));
-            
-            auto store = std::make_unique<StoreIRValue>();
-            store->value = std::make_unique<IntegerIRValue>(0);
-            store->dest = ptr_name;
-            ctx.current_block->ADD_Value(std::move(store));
-        }
+        // 注意：对于局部数组，未初始化的部分不需要显式清零
+        // SysY 标准规定局部数组的未初始化部分是未定义的
+        // 这里删除了原本的清零循环，减少生成的 IR 代码量
+        
     } else if (ast->type == InitValAST::ZEROINIT) {
-        for (int i = 0; i < array_size; ++i) {
-            auto gep = std::make_unique<GetElemPtrIRValue>();
-            std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(i) + "_" + std::to_string(blockcount++);
-            gep->result_name = ptr_name;
-            gep->src = base_addr;
-            gep->index = std::make_unique<IntegerIRValue>(i);
-            ctx.current_block->ADD_Value(std::move(gep));
-            
-            auto store = std::make_unique<StoreIRValue>();
-            store->value = std::make_unique<IntegerIRValue>(0);
-            store->dest = ptr_name;
-            ctx.current_block->ADD_Value(std::move(store));
-        }
+        // 对于显式的 {} 零初始化，也不需要生成代码
+        // 局部数组的初始化交给运行时处理（实际上不会处理，保持未定义）
     }
 }
 

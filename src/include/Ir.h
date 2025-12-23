@@ -123,6 +123,7 @@ public:
     std::unique_ptr<BaseIRValue> value;
     std::string var_name;
     std::string data_type;
+    int float_size;
 
     GlobalAllocIRValue() = default;
     GlobalAllocIRValue(Type t,std::unique_ptr<BaseIRValue> v,const std::string& d,const std::string& ty) :type(t), value(std::move(v)), var_name(d),data_type(ty) {};

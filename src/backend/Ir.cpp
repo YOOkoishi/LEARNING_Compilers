@@ -375,13 +375,21 @@ void IRFunction::To_RiscV() const{
     for(const auto& block : ir_basicblock){
         for (const auto& value : block ->ir_value){
             if(auto* alloc = dynamic_cast<AllocIRValue*>(value.get())){
-                ctx.stack.allocate(alloc->var_name);
+                // 修复：分配数组大小
+                if (alloc->type == AllocIRValue::ARRAY) {
+                    ctx.stack.allocate(alloc->var_name, alloc->size);
+                } else {
+                    ctx.stack.allocate(alloc->var_name, 4);
+                }
             }   
             else if(auto* load = dynamic_cast<LoadIRValue*>(value.get())){
                 ctx.stack.allocate(load->result_name);
             }
             else if(auto* binary = dynamic_cast<BinaryIRValue*>(value.get())){
                 ctx.stack.allocate(binary->result_name);
+            }
+            else if(auto* ptr = dynamic_cast<GetElemPtrIRValue*>(value.get())){
+                ctx.stack.allocate(ptr->result_name);
             }
             else if(auto* call = dynamic_cast<CallIRValue*>(value.get())){
                 has_call = true;
@@ -416,10 +424,23 @@ void IRFunction::To_RiscV() const{
     std::cout<<name<<":\n";
 
     if(frame_size > 0){
-        std::cout << "  addi sp, sp, -" << frame_size << std::endl;
+        if (frame_size >= 2048) {
+            std::cout << "  li t0, -" << frame_size << std::endl;
+            std::cout << "  add sp, sp, t0" << std::endl;
+        } else {
+            std::cout << "  addi sp, sp, -" << frame_size << std::endl;
+        }
+        
         // 如果 R != 0, 保存 ra 到 sp + S' - 4
         if (R > 0) {
-            std::cout << "  sw ra, " << ctx.stack.getRaOffset() << "(sp)" << std::endl;
+            int ra_offset = ctx.stack.getRaOffset();
+            if (ra_offset >= 2048) {
+                std::cout << "  li t0, " << ra_offset << std::endl;
+                std::cout << "  add t0, sp, t0" << std::endl;
+                std::cout << "  sw ra, 0(t0)" << std::endl;
+            } else {
+                std::cout << "  sw ra, " << ra_offset << "(sp)" << std::endl;
+            }
         }
     }    
 
@@ -461,7 +482,13 @@ void ReturnIRValue::To_RiscV() const{
             }
         } else if(auto temp = dynamic_cast<TemporaryIRValue*>(return_value.get())) {
             int offset = stack.getOffset(temp->temp_name);
-            std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
+            if (offset >= 2048) {
+                std::cout << "  li t0, " << offset << std::endl;
+                std::cout << "  add t0, sp, t0" << std::endl;
+                std::cout << "  lw a0, 0(t0)" << std::endl;
+            } else {
+                std::cout << "  lw a0, " << offset << "(sp)" << std::endl;
+            }
         }
     }
     
@@ -470,9 +497,22 @@ void ReturnIRValue::To_RiscV() const{
     if (frame_size > 0) {
         // 如果 R != 0, 从栈恢复 ra
         if (stack.getR() > 0) {
-            std::cout << "  lw ra, " << stack.getRaOffset() << "(sp)" << std::endl;
+            int ra_offset = stack.getRaOffset();
+            if (ra_offset >= 2048) {
+                std::cout << "  li t0, " << ra_offset << std::endl;
+                std::cout << "  add t0, sp, t0" << std::endl;
+                std::cout << "  lw ra, 0(t0)" << std::endl;
+            } else {
+                std::cout << "  lw ra, " << ra_offset << "(sp)" << std::endl;
+            }
         }
-        std::cout << "  addi sp, sp, " << frame_size << std::endl;
+        
+        if (frame_size >= 2048) {
+            std::cout << "  li t0, " << frame_size << std::endl;
+            std::cout << "  add sp, sp, t0" << std::endl;
+        } else {
+            std::cout << "  addi sp, sp, " << frame_size << std::endl;
+        }
     }
     std::cout << "  ret";
 }
@@ -493,7 +533,13 @@ void BinaryIRValue::To_RiscV() const {
         std::cout << "  li t0, " << left_int->value << std::endl;
     } else if (auto* left_temp = dynamic_cast<TemporaryIRValue*>(left.get())) {
         int left_offset = stack.getOffset(left_temp->temp_name);
-        std::cout << "  lw t0, " << left_offset << "(sp)" << std::endl;
+        if (left_offset >= 2048) {
+            std::cout << "  li t2, " << left_offset << std::endl;
+            std::cout << "  add t2, sp, t2" << std::endl;
+            std::cout << "  lw t0, 0(t2)" << std::endl;
+        } else {
+            std::cout << "  lw t0, " << left_offset << "(sp)" << std::endl;
+        }
     }
     
     // 加载右操作数到 t1
@@ -501,7 +547,13 @@ void BinaryIRValue::To_RiscV() const {
         std::cout << "  li t1, " << right_int->value << std::endl;
     } else if (auto* right_temp = dynamic_cast<TemporaryIRValue*>(right.get())) {
         int right_offset = stack.getOffset(right_temp->temp_name);
-        std::cout << "  lw t1, " << right_offset << "(sp)" << std::endl;
+        if (right_offset >= 2048) {
+            std::cout << "  li t2, " << right_offset << std::endl;
+            std::cout << "  add t2, sp, t2" << std::endl;
+            std::cout << "  lw t1, 0(t2)" << std::endl;
+        } else {
+            std::cout << "  lw t1, " << right_offset << "(sp)" << std::endl;
+        }
     }
     
     // 执行运算，结果放在 t0
@@ -537,7 +589,13 @@ void BinaryIRValue::To_RiscV() const {
     }
     
     // 保存结果到栈
-    std::cout << "  sw t0, " << result_offset << "(sp)";
+    if (result_offset >= 2048) {
+        std::cout << "  li t1, " << result_offset << std::endl;
+        std::cout << "  add t1, sp, t1" << std::endl;
+        std::cout << "  sw t0, 0(t1)";
+    } else {
+        std::cout << "  sw t0, " << result_offset << "(sp)";
+    }
 }
 
 
@@ -574,11 +632,24 @@ void StoreIRValue::To_RiscV() const{
             if (stack_param_offset >= 0) {
                 // 从调用者栈帧读取: sp + frame_size + stack_param_offset
                 int frame_size = stack.getFrameSize();
-                std::cout << "  lw t0, " << (frame_size + stack_param_offset) << "(sp)" << std::endl;
+                int offset = frame_size + stack_param_offset;
+                if (offset >= 2048) {
+                    std::cout << "  li t1, " << offset << std::endl;
+                    std::cout << "  add t1, sp, t1" << std::endl;
+                    std::cout << "  lw t0, 0(t1)" << std::endl;
+                } else {
+                    std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+                }
             } else {
                 // 普通临时变量，从当前栈帧读取
                 int src_offset = stack.getOffset(temp->temp_name);
-                std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+                if (src_offset >= 2048) {
+                    std::cout << "  li t1, " << src_offset << std::endl;
+                    std::cout << "  add t1, sp, t1" << std::endl;
+                    std::cout << "  lw t0, 0(t1)" << std::endl;
+                } else {
+                    std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+                }
             }
         }
     }
@@ -588,10 +659,32 @@ void StoreIRValue::To_RiscV() const{
     if (dest.length() > 0 && dest[0] == '@') {
         std::string name = dest.substr(1);
         std::cout << "  la t1, " << name << std::endl;
-        std::cout << "  sw t0, 0(t1)";
+        std::cout << "  sw t0, 0(t1)" << std::endl;
     } else {
+        // 检查是否是指针变量（getelemptr 的结果，通常以 %ptr 开头）
+        bool is_pointer = (dest.find("%ptr") == 0);
+        
         int dest_offset = stack.getOffset(dest);
-        std::cout << "  sw t0, " << dest_offset << "(sp)";
+        if (is_pointer) {
+            // 指针变量：需要先加载指针的值（地址），然后存储到那个地址
+            if (dest_offset >= 2048) {
+                std::cout << "  li t1, " << dest_offset << std::endl;
+                std::cout << "  add t1, sp, t1" << std::endl;
+                std::cout << "  lw t1, 0(t1)" << std::endl;
+            } else {
+                std::cout << "  lw t1, " << dest_offset << "(sp)" << std::endl;
+            }
+            std::cout << "  sw t0, 0(t1)" << std::endl;
+        } else {
+            // 普通变量：直接存储到栈上的位置
+            if (dest_offset >= 2048) {
+                std::cout << "  li t1, " << dest_offset << std::endl;
+                std::cout << "  add t1, sp, t1" << std::endl;
+                std::cout << "  sw t0, 0(t1)" << std::endl;
+            } else {
+                std::cout << "  sw t0, " << dest_offset << "(sp)" << std::endl;
+            }
+        }
     }
 }
 
@@ -606,11 +699,41 @@ void LoadIRValue::To_RiscV() const{
         std::cout << "  la t0, " << name << std::endl;
         std::cout << "  lw t0, 0(t0)" << std::endl;
     } else {
+        // 检查是否是指针变量（getelemptr 的结果）
+        bool is_pointer = (src.find("%ptr") == 0);
+        
         int src_offset = stack.getOffset(src);
-        std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+        if (is_pointer) {
+            // 指针变量：先加载指针的值（地址），然后从那个地址加载值
+            if (src_offset >= 2048) {
+                std::cout << "  li t1, " << src_offset << std::endl;
+                std::cout << "  add t1, sp, t1" << std::endl;
+                std::cout << "  lw t0, 0(t1)" << std::endl;
+            } else {
+                std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+            }
+            // t0 现在是指针的值（地址），从这个地址加载实际的值
+            std::cout << "  lw t0, 0(t0)" << std::endl;
+        } else {
+            // 普通变量：直接从栈上加载
+            if (src_offset >= 2048) {
+                std::cout << "  li t1, " << src_offset << std::endl;
+                std::cout << "  add t1, sp, t1" << std::endl;
+                std::cout << "  lw t0, 0(t1)" << std::endl;
+            } else {
+                std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+            }
+        }
     }
     
-    std::cout << "  sw t0, " << dest_offset << "(sp)";
+    // 存储加载的值到结果变量
+    if (dest_offset >= 2048) {
+        std::cout << "  li t1, " << dest_offset << std::endl;
+        std::cout << "  add t1, sp, t1" << std::endl;
+        std::cout << "  sw t0, 0(t1)" << std::endl;
+    } else {
+        std::cout << "  sw t0, " << dest_offset << "(sp)" << std::endl;
+    }
 }
 
 
@@ -631,7 +754,13 @@ void BranchIRValue::To_RiscV() const {
         std::cout << "  li t0, " << int_val->value << std::endl;
     } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(condition.get())) {
         int offset = stack.getOffset(temp->temp_name);
-        std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+        if (offset >= 2048) {
+            std::cout << "  li t0, " << offset << std::endl;
+            std::cout << "  add t0, sp, t0" << std::endl;
+            std::cout << "  lw t0, 0(t0)" << std::endl;
+        } else {
+            std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+        }
     }
     
     std::string t_label = true_label;
@@ -656,7 +785,13 @@ void CallIRValue::To_RiscV() const {
                 std::cout << "  li a" << i << ", " << int_val->value << std::endl;
             } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(funcrparams[i].get())) {
                 int offset = stack.getOffset(temp->temp_name);
-                std::cout << "  lw a" << i << ", " << offset << "(sp)" << std::endl;
+                if (offset >= 2048) {
+                    std::cout << "  li t0, " << offset << std::endl;
+                    std::cout << "  add t0, sp, t0" << std::endl;
+                    std::cout << "  lw a" << i << ", 0(t0)" << std::endl;
+                } else {
+                    std::cout << "  lw a" << i << ", " << offset << "(sp)" << std::endl;
+                }
             }
         } else {
             // 第 9 个及以后的参数通过栈传递
@@ -665,9 +800,23 @@ void CallIRValue::To_RiscV() const {
                 std::cout << "  li t0, " << int_val->value << std::endl;
             } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(funcrparams[i].get())) {
                 int offset = stack.getOffset(temp->temp_name);
-                std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+                if (offset >= 2048) {
+                    std::cout << "  li t1, " << offset << std::endl;
+                    std::cout << "  add t1, sp, t1" << std::endl;
+                    std::cout << "  lw t0, 0(t1)" << std::endl;
+                } else {
+                    std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+                }
             }
-            std::cout << "  sw t0, " << (i - 8) * 4 << "(sp)" << std::endl;
+            
+            int arg_offset = (i - 8) * 4;
+            if (arg_offset >= 2048) {
+                std::cout << "  li t1, " << arg_offset << std::endl;
+                std::cout << "  add t1, sp, t1" << std::endl;
+                std::cout << "  sw t0, 0(t1)" << std::endl;
+            } else {
+                std::cout << "  sw t0, " << arg_offset << "(sp)" << std::endl;
+            }
         }
     }
     
@@ -679,7 +828,13 @@ void CallIRValue::To_RiscV() const {
     // 3. Handle return value
     if (type == OTHER) {
         int offset = stack.getOffset(result_name);
-        std::cout << "  sw a0, " << offset << "(sp)" << std::endl;
+        if (offset >= 2048) {
+            std::cout << "  li t1, " << offset << std::endl;
+            std::cout << "  add t1, sp, t1" << std::endl;
+            std::cout << "  sw a0, 0(t1)" << std::endl;
+        } else {
+            std::cout << "  sw a0, " << offset << "(sp)" << std::endl;
+        }
     }
 }
 
@@ -705,19 +860,38 @@ void GlobalAllocIRValue::To_RiscV() const {
         if(name.length() > 0)name = name.substr(1);
         std::cout<<"  .global "<< name <<std::endl;
         std::cout<<name<<":"<<std::endl;
-        std::cout<<"  ";
-        int temp_cnt = 0;
-        for(auto i : init_list){
-            if(auto val = dynamic_cast<IntegerIRValue*>(value.get())){
-                if(val->value == ){
-                    std::cout<<".zero 4"<<std::endl;
-                }
-                else{
-                    std::cout<<".word "<<val->value<<std::endl;
+        
+        // 计算需要的总字节数
+        int total_bytes = 0;
+        if (!init_list.empty()) {
+            total_bytes = init_list.size() * 4;
+        } else {
+            // 从 data_type 中解析数组大小: [i32, N]
+            // data_type 格式: [i32, N]
+            size_t pos1 = data_type.find(',');
+            if (pos1 != std::string::npos) {
+                size_t pos2 = data_type.find(']', pos1);
+                if (pos2 != std::string::npos) {
+                    std::string size_str = data_type.substr(pos1 + 1, pos2 - pos1 - 1);
+                    // 去除空格
+                    size_str.erase(0, size_str.find_first_not_of(" \t"));
+                    size_str.erase(size_str.find_last_not_of(" \t") + 1);
+                    int array_size = std::stoi(size_str);
+                    total_bytes = array_size * 4;
                 }
             }
         }
-
+        
+        if (!init_list.empty()) {
+            // 有初始化列表，逐个输出
+            for(auto i : init_list){
+                std::cout<<"  .word "<<i<<std::endl;
+            }
+        } else if (total_bytes > 0) {
+            // 没有初始化列表，使用 .zero
+            std::cout<<"  .zero "<<total_bytes<<std::endl;
+        }
+        std::cout<<std::endl;
     }
 }
 
@@ -725,5 +899,101 @@ void GlobalAllocIRValue::To_RiscV() const {
 
 
 void GetElemPtrIRValue::To_RiscV() const {
-
+    auto& stack = GenContext::current_ctx->stack;
+    int dest_offset = stack.getOffset(result_name);
+    
+    // 1. Calculate offset (index * 4) -> t1
+    if (auto* int_val = dynamic_cast<IntegerIRValue*>(index.get())) {
+        int offset_bytes = int_val->value * 4;
+        if (offset_bytes >= 2048 || offset_bytes <= -2048) {
+            std::cout << "  li t1, " << offset_bytes << std::endl;
+        } else {
+            std::cout << "  li t1, " << offset_bytes << std::endl;
+        }
+    } else if (auto* temp = dynamic_cast<TemporaryIRValue*>(index.get())) {
+        int idx_offset = stack.getOffset(temp->temp_name);
+        if (idx_offset >= 2048) {
+            std::cout << "  li t2, " << idx_offset << std::endl;
+            std::cout << "  add t2, sp, t2" << std::endl;
+            std::cout << "  lw t1, 0(t2)" << std::endl;
+        } else {
+            std::cout << "  lw t1, " << idx_offset << "(sp)" << std::endl;
+        }
+        std::cout << "  slli t1, t1, 2" << std::endl;
+    }
+    
+    // 2. Calculate base address -> t0
+    if (src.length() > 0 && src[0] == '@') {
+        // Global array
+        std::string name = src.substr(1);
+        std::cout << "  la t0, " << name << std::endl;
+    } else {
+        // Local
+        // Check if it is a parameter
+        int reg_param = stack.getParamReg(src);
+        int stack_param = stack.getStackParamOffset(src);
+        
+        if (reg_param >= 0) {
+            // Parameter in register (it's a pointer)
+            std::cout << "  mv t0, a" << reg_param << std::endl;
+        } else if (stack_param >= 0) {
+            // Parameter on stack (it's a pointer)
+            int frame_size = stack.getFrameSize();
+            int offset = frame_size + stack_param;
+            if (offset >= 2048) {
+                std::cout << "  li t2, " << offset << std::endl;
+                std::cout << "  add t2, sp, t2" << std::endl;
+                std::cout << "  lw t0, 0(t2)" << std::endl;
+            } else {
+                std::cout << "  lw t0, " << offset << "(sp)" << std::endl;
+            }
+        } else {
+            // Not a parameter.
+            // Check if it is a temporary (getelemptr result, starts with %ptr or %[0-9])
+            bool is_temp_ptr = (src.length() > 1 && src[0] == '%');
+            
+            int src_offset = stack.getOffset(src);
+            
+            if (src_offset < 0) {
+                // 变量未找到，可能是错误
+                std::cerr << "Warning: variable " << src << " not found in stack frame" << std::endl;
+                return;
+            }
+            
+            // 判断是指针还是数组：如果 src 以 %ptr 开头或者是前一个 getelemptr 的结果，则是指针
+            // 否则是局部数组（如 %arr）
+            bool is_pointer = (src.find("%ptr") == 0) || (src.length() > 1 && src[0] == '%' && isdigit(src[1]));
+            
+            if (is_pointer) {
+                // Temporary pointer variable -> Load pointer value
+                if (src_offset >= 2048) {
+                    std::cout << "  li t2, " << src_offset << std::endl;
+                    std::cout << "  add t2, sp, t2" << std::endl;
+                    std::cout << "  lw t0, 0(t2)" << std::endl;
+                } else {
+                    std::cout << "  lw t0, " << src_offset << "(sp)" << std::endl;
+                }
+            } else {
+                // Local Array (like %arr) -> Calculate address (sp + offset)
+                if (src_offset >= 2048) {
+                    std::cout << "  li t0, " << src_offset << std::endl;
+                    std::cout << "  add t0, sp, t0" << std::endl;
+                } else {
+                    std::cout << "  addi t0, sp, " << src_offset << std::endl;
+                }
+            }
+        }
+    }
+    
+    // 3. Add base + offset -> t0
+    std::cout << "  add t0, t0, t1" << std::endl;
+    
+    // 4. Store result
+    if (dest_offset >= 2048) {
+        std::cout << "  li t1, " << dest_offset << std::endl;
+        std::cout << "  add t1, sp, t1" << std::endl;
+        std::cout << "  sw t0, 0(t1)" << std::endl;
+    } else {
+        std::cout << "  sw t0, " << dest_offset << "(sp)" << std::endl;
+    }
 } 

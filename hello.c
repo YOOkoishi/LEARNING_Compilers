@@ -1,6 +1,6 @@
-int x[2] = {10, 20};
+int arr[65536];
 
 int main() {
-  int arr[5] = {1, 2, 3};
-  return arr[2];
+  int arr[4096] = {1};
+  return arr[0];
 }
