@@ -41,7 +41,7 @@ void ReturnIRValue::Dump() const{
 
 
 void AllocIRValue::Dump() const {
-    std::cout << "  " << var_name << " = alloc " << type << std::endl;
+    std::cout << "  " << var_name << " = alloc " << data_type << std::endl;
 }
 
 
@@ -213,15 +213,39 @@ void CallIRValue::Dump() const {
 
 
 void GlobalAllocIRValue::Dump() const {
-    std::cout<<"global "<<var_name<<" = "<<"alloc "<<type<<", ";
-    if(auto val =dynamic_cast<IntegerIRValue*>(value.get())){
-        if(val ->value == 0){
-            std::cout<<"zeroinit"<<std::endl;
+    std::cout << "global " << var_name << " = alloc " << data_type << ", ";
+    if (type == VAR) {
+        if (auto val = dynamic_cast<IntegerIRValue*>(value.get())) {
+            if (val->value == 0) {
+                std::cout << "zeroinit";
+            } else {
+                std::cout << val->value;
+            }
+        } else {
+            std::cout << "zeroinit";
         }
-        else{
-            std::cout<<val ->value<<std::endl;
+    } else if (type == ARRAY) {
+        if (init_list.empty()) {
+            std::cout << "zeroinit";
+        } else {
+            std::cout << "{";
+            for (size_t i = 0; i < init_list.size(); ++i) {
+                std::cout << init_list[i];
+                if (i < init_list.size() - 1) {
+                    std::cout << ", ";
+                }
+            }
+            std::cout << "}";
         }
     }
+    std::cout << std::endl;
+}
+
+
+void GetElemPtrIRValue::Dump() const {
+    std::cout << "  " << result_name << " = getelemptr " << src << ", ";
+    index->Dump();
+    std::cout << std::endl;
 }
 
 
@@ -676,3 +700,9 @@ void GlobalAllocIRValue::To_RiscV() const {
     }
 }
 
+
+
+
+void GetElemPtrIRValue::To_RiscV() const {
+
+} 

@@ -295,7 +295,7 @@ VarDef
     $$ = vardef;
   } 
   | IDENT '[' ConstExp ']' '=' InitVal {
-    auto vardef = new VarDefAST(VarDefAST::ARRAY);
+    auto vardef = new VarDefAST(VarDefAST::ARRAYDEF);
     vardef -> ident = *unique_ptr<string>($1);
     vardef -> constexp = unique_ptr<BaseAST>($3);
     vardef -> initval = unique_ptr<BaseAST>($6);

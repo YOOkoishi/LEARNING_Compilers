@@ -151,11 +151,12 @@ public:
     void visitConstDefs(const ConstDefsAST* ast);
     void visitConstDef(const ConstDefAST* ast);
     std::vector<int> visitConstInitVal(const ConstInitValAST* ast,int array_size);
-    std::vector<int> visitConstList(const ConstExpListAST* ast,int array_size); 
     void visitVarDecl(const VarDeclAST* ast);
     void visitVarDefs(const VarDefsAST* ast);
     void visitVarDef(const VarDefAST* ast);
     void visitInitValAST(const InitValAST* ast);
+    std::vector<int> evaluateGlobalInitVal(const InitValAST* ast, int array_size);
+    void visitArrayInit(const std::string& base_addr, const InitValAST* ast, int array_size);
     
 
 

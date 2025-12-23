@@ -40,6 +40,12 @@ public:
     Symbol() = default;
     Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, int val = 0)
         : name(n), ir_name(ir), type(t), datatype(dt), scope_level(lvl), const_value(val) {}
+
+    // Constructor for arrays
+    Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, 
+           const std::vector<int>& dims, const std::vector<int>& vals = {})
+        : name(n), ir_name(ir), type(t), datatype(dt), scope_level(lvl), const_value(0), 
+          array_dims(dims), const_array_values(vals) {}
 };
 
 
@@ -97,6 +103,21 @@ public:
         current_scope[name] = symbol;
         return ir_name;
     }
+
+    // 声明数组符号
+    std::string declareArray(const std::string& name, SymbolType type, DataType datatype, 
+                             const std::vector<int>& dims, const std::vector<int>& values = {}) {
+        auto& current_scope = symbol_table.back();
+        
+        if (current_scope.find(name) != current_scope.end()) {
+            throw std::runtime_error("Error: Redeclaration of '" + name + "'");
+        }
+        
+        std::string ir_name = generateIRName(name);
+        auto symbol = std::make_shared<Symbol>(name, ir_name, type, datatype, current_scope_level, dims, values);
+        current_scope[name] = symbol;
+        return ir_name;
+    }
     
     // 查询符号（从内到外查找）
     std::shared_ptr<Symbol> lookup(const std::string& name) {
@@ -130,5 +151,10 @@ public:
 
     bool isGlobalScope() const {
         return current_scope_level == 0;
+    }
+
+    // 获取当前作用域层级
+    int getCurrentScopeLevel() const {
+        return current_scope_level;
     }
 };

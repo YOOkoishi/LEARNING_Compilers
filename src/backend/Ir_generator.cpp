@@ -271,10 +271,25 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         // 3. 计算右侧表达式的值
         auto rhs_value = visitExp(exp);
         
-        // 4. 生成 store 指令，使用 symbol->ir_name
-        auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), symbol->ir_name);
-        ctx.current_block->ADD_Value(std::move(store_ir));
-        
+        // 4. 生成 store 指令
+        if (lval->type == LValAST::ARRAY) {
+            // Array assignment: arr[i] = val
+            auto index_val = visitExp(dynamic_cast<ExpAST*>(lval->address.get()));
+            
+            auto gep = std::make_unique<GetElemPtrIRValue>();
+            std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+            gep->result_name = ptr_name;
+            gep->src = symbol->ir_name;
+            gep->index = std::move(index_val);
+            ctx.current_block->ADD_Value(std::move(gep));
+            
+            auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), ptr_name);
+            ctx.current_block->ADD_Value(std::move(store_ir));
+        } else {
+            // Scalar assignment: a = val
+            auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), symbol->ir_name);
+            ctx.current_block->ADD_Value(std::move(store_ir));
+        }
     }
 
     else if(ast -> type == StmtAST::BLOCK){
@@ -550,7 +565,7 @@ void IRGenerator::visitConstDefs(const ConstDefsAST* ast){
 void IRGenerator::visitConstDef(const ConstDefAST* ast){
     if(!ast) return ;
     if(ast ->type == ConstDefAST::CONST){
-        int cosnt_value = evaluateConstExp(ast->constinitval.get());
+        int const_value = evaluateConstExp(ast->constinitval.get());
     
         try
         {
@@ -558,7 +573,7 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
                 ast->ident,
                 SymbolType::CONST,
                 DataType::INT,
-                cosnt_value
+                const_value
             );
         }
         catch(const std::runtime_error& e)
@@ -569,26 +584,83 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
     }
     else if(ast -> type == ConstDefAST::ARRAY){
         int array_size = evaluateConstExp(ast ->constexp.get());
-        auto initval = visitConstInitVal(dynamic_cast<ConstInitValAST*>( ast -> constinitval.get()));
-         
+        std::vector<int> dims = {array_size};
+        auto initval = visitConstInitVal(dynamic_cast<ConstInitValAST*>( ast -> constinitval.get()) , array_size);
+     
+        try
+        {
+            std::string ir_name = ctx.symbol_table->declareArray(
+                ast->ident,
+                SymbolType::CONST,
+                DataType::ARRAY,
+                dims,
+                initval
+            );
 
+            if (ctx.symbol_table->getCurrentScopeLevel() == 0) {
+                // Global constant array
+                auto global_alloc = std::make_unique<GlobalAllocIRValue>();
+                global_alloc->type = GlobalAllocIRValue::ARRAY;
+                global_alloc->var_name = ir_name;
+                global_alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
+                global_alloc->init_list = initval;
+                program->global_value.push_back(std::move(global_alloc));
+            } else {
+                // Local constant array
+                auto alloc = std::make_unique<AllocIRValue>();
+                alloc->type = AllocIRValue::ARRAY;
+                alloc->var_name = ir_name;
+                alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
+                alloc->size = array_size * 4;
+                ctx.current_block->ADD_Value(std::move(alloc));
 
+                // Initialize local array
+                for(int i=0; i<array_size; ++i) {
+                    auto gep = std::make_unique<GetElemPtrIRValue>();
+                    std::string ptr_name = "%ptr_" + ir_name.substr(1) + "_" + std::to_string(i) + "_" + std::to_string(blockcount++); 
+                    gep->result_name = ptr_name;
+                    gep->src = ir_name;
+                    gep->index = std::make_unique<IntegerIRValue>(i);
+                    ctx.current_block->ADD_Value(std::move(gep));
+
+                    auto store = std::make_unique<StoreIRValue>();
+                    store->value = std::make_unique<IntegerIRValue>(initval[i]);
+                    store->dest = ptr_name;
+                    ctx.current_block->ADD_Value(std::move(store));
+                }
+            }
+        }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << "Error in constant declaration" << e.what() << '\n';
+        }
     }
 }
 
 
 
-std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast){
-    if(!ast) return;
+std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast,int array_size){
+    if(!ast) return {};
+    std::vector<int> init_list;
     if(ast -> type ==  ConstInitValAST::CONSTLIST){
-        std::vector<int> init_list;
         if(auto constlist = dynamic_cast<ConstExpListAST*>(ast->constlist.get())){
-            for(const auto &constexp : constlist->constexplist){
-                init_list.push_back(evaluateConstExp(constexp.get()));
+            for(const auto &i : constlist->constexplist){
+                if(auto constexp = dynamic_cast<ConstExpAST*>(i.get())){
+                    init_list.push_back(evaluateConstExp(constexp));
+                }
             }
         }
+        int init_size = init_list.size();
+        for(int i = init_size ; i<array_size ; i++){
+            init_list.push_back(0);
+        }
     }
-
+    else if(ast -> type == ConstInitValAST::ZEROINIT){
+        for(int i = 0;i< array_size;i++){
+            init_list.push_back(0);
+        }
+    }
+    return init_list;
 }
 
 /*
@@ -633,86 +705,162 @@ void IRGenerator::visitVarDefs(const VarDefsAST* ast){
 void IRGenerator::visitVarDef(const VarDefAST* ast){
     if(!ast) return;
 
-    std::string var_name;
-
     bool is_global = ctx.symbol_table->isGlobalScope();
 
-    if(ast ->type == VarDefAST::IDENT){
-        try
-        {
+    if(ast->type == VarDefAST::IDENT || ast->type == VarDefAST::IDENTDEF){
+        std::string var_name;
+        try {
             var_name = ctx.symbol_table->declare(
                 ast->ident,
                 SymbolType::VAR,
                 DataType::INT
             );
+        } catch(const std::runtime_error& e) {
+            std::cerr << "Error in variable declaration: " << e.what() << '\n';
+            return;
         }
-        catch(const std::runtime_error& e)
-        {
-            std::cerr << "Error in variable declaration" << e.what() << '\n';
-        }
-        
 
         if(is_global){
-            auto zero_init = std::make_unique<IntegerIRValue>(0);
-            auto global_alloc = std::make_unique<GlobalAllocIRValue>(
-                GlobalAllocIRValue::VAR,std::move(zero_init) , var_name , "i32"
-            );
-
-            ctx.program->ADD_Globalvalue(std::move(global_alloc));
-        }   
-        else {
-            // only allocIR
-            auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR,var_name,"i32");
-            ctx.current_block ->ADD_Value(std::move(alloc));
-        }     
-
-    }
-    else if(ast ->type == VarDefAST::IDENTDEF){
-        try
-        {
-            var_name = ctx.symbol_table->declare(
-                ast->ident,
-                SymbolType::VAR,
-                DataType::INT
-            );
-        }
-        catch(const std::runtime_error& e)
-        {
-            std::cerr << "Error in variable declaration" << e.what() << '\n';
-        }
-        if(is_global){
-
             int init_value = 0;
-            if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
-                init_value = evaluateConstExp(initval->exp.get());
+            if(ast->type == VarDefAST::IDENTDEF){
+                if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
+                    init_value = evaluateConstExp(initval->exp.get());
+                }
             }
 
             auto init_ir = std::make_unique<IntegerIRValue>(init_value);            
-
-
             auto global_alloc = std::make_unique<GlobalAllocIRValue>(
-                GlobalAllocIRValue::VAR, std::move(init_ir),var_name,"i32"
+                GlobalAllocIRValue::VAR, std::move(init_ir), var_name, "i32"
             );
-
             ctx.program->ADD_Globalvalue(std::move(global_alloc));
         }
         else{
             // allocIR
-            auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR,var_name,"i32");
-    
-            ctx.current_block ->ADD_Value(std::move(alloc));    
+            auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR, var_name, "i32");
+            ctx.current_block->ADD_Value(std::move(alloc));
             
-            
-            //storeIR 
-    
-            if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
-                if(auto exp = dynamic_cast<ExpAST*>(initval ->exp.get())){
-                    auto var_value = visitExp(exp);
-                    auto store = std::make_unique<StoreIRValue>(std::move(var_value),var_name);
-    
-                    ctx.current_block->ADD_Value(std::move(store));
+            if(ast->type == VarDefAST::IDENTDEF){
+                if(auto initval = dynamic_cast<InitValAST*>(ast->initval.get())){
+                    if(auto exp = dynamic_cast<ExpAST*>(initval->exp.get())){
+                        auto val = visitExp(exp);
+                        auto store = std::make_unique<StoreIRValue>(std::move(val), var_name);
+                        ctx.current_block->ADD_Value(std::move(store));
+                    }
                 }
             }
+        }     
+    }
+    else if(ast->type == VarDefAST::ARRAY || ast->type == VarDefAST::ARRAYDEF){
+        int array_size = evaluateConstExp(ast->constexp.get());
+        std::vector<int> dims = {array_size};
+        
+        std::string ir_name;
+        try {
+            ir_name = ctx.symbol_table->declareArray(ast->ident, SymbolType::VAR, DataType::ARRAY, dims);
+        } catch(const std::runtime_error& e) {
+            std::cerr << "Error in array declaration: " << e.what() << '\n';
+            return;
+        }
+
+        if(is_global){
+            auto global_alloc = std::make_unique<GlobalAllocIRValue>();
+            global_alloc->type = GlobalAllocIRValue::ARRAY;
+            global_alloc->var_name = ir_name;
+            global_alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
+            
+            if(ast->type == VarDefAST::ARRAYDEF){
+                global_alloc->init_list = evaluateGlobalInitVal(dynamic_cast<InitValAST*>(ast->initval.get()), array_size);
+            } else {
+                global_alloc->init_list.resize(array_size, 0);
+            }
+            ctx.program->ADD_Globalvalue(std::move(global_alloc));
+        } else {
+            auto alloc = std::make_unique<AllocIRValue>();
+            alloc->type = AllocIRValue::ARRAY;
+            alloc->var_name = ir_name;
+            alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
+            alloc->size = array_size * 4;
+            ctx.current_block->ADD_Value(std::move(alloc));
+            
+            if(ast->type == VarDefAST::ARRAYDEF){
+                visitArrayInit(ir_name, dynamic_cast<InitValAST*>(ast->initval.get()), array_size);
+            }
+        }
+    }
+}
+
+std::vector<int> IRGenerator::evaluateGlobalInitVal(const InitValAST* ast, int array_size) {
+    if (!ast) return {};
+    std::vector<int> init_list;
+    
+    if (ast->type == InitValAST::ARRAY) {
+        if (auto explist = dynamic_cast<ExpListAST*>(ast->explist.get())) {
+            for (const auto& exp : explist->explist) {
+                init_list.push_back(evaluateConstExp(exp.get()));
+            }
+        }
+        while (init_list.size() < array_size) {
+            init_list.push_back(0);
+        }
+    } else if (ast->type == InitValAST::ZEROINIT) {
+        init_list.resize(array_size, 0);
+    }
+    return init_list;
+}
+
+void IRGenerator::visitArrayInit(const std::string& base_addr, const InitValAST* ast, int array_size) {
+    if (!ast) return;
+    
+    if (ast->type == InitValAST::ARRAY) {
+        int index = 0;
+        if (auto explist = dynamic_cast<ExpListAST*>(ast->explist.get())) {
+            for (const auto& exp_ast : explist->explist) {
+                if (index >= array_size) break;
+                
+                auto val = visitExp(dynamic_cast<ExpAST*>(exp_ast.get()));
+                
+                auto gep = std::make_unique<GetElemPtrIRValue>();
+                std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(index) + "_" + std::to_string(blockcount++);
+                gep->result_name = ptr_name;
+                gep->src = base_addr;
+                gep->index = std::make_unique<IntegerIRValue>(index);
+                ctx.current_block->ADD_Value(std::move(gep));
+                
+                auto store = std::make_unique<StoreIRValue>();
+                store->value = std::move(val);
+                store->dest = ptr_name;
+                ctx.current_block->ADD_Value(std::move(store));
+                
+                index++;
+            }
+        }
+        
+        for (; index < array_size; ++index) {
+            auto gep = std::make_unique<GetElemPtrIRValue>();
+            std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(index) + "_" + std::to_string(blockcount++);
+            gep->result_name = ptr_name;
+            gep->src = base_addr;
+            gep->index = std::make_unique<IntegerIRValue>(index);
+            ctx.current_block->ADD_Value(std::move(gep));
+            
+            auto store = std::make_unique<StoreIRValue>();
+            store->value = std::make_unique<IntegerIRValue>(0);
+            store->dest = ptr_name;
+            ctx.current_block->ADD_Value(std::move(store));
+        }
+    } else if (ast->type == InitValAST::ZEROINIT) {
+        for (int i = 0; i < array_size; ++i) {
+            auto gep = std::make_unique<GetElemPtrIRValue>();
+            std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(i) + "_" + std::to_string(blockcount++);
+            gep->result_name = ptr_name;
+            gep->src = base_addr;
+            gep->index = std::make_unique<IntegerIRValue>(i);
+            ctx.current_block->ADD_Value(std::move(gep));
+            
+            auto store = std::make_unique<StoreIRValue>();
+            store->value = std::make_unique<IntegerIRValue>(0);
+            store->dest = ptr_name;
+            ctx.current_block->ADD_Value(std::move(store));
         }
     }
 }
@@ -1272,26 +1420,45 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
                 throw std::runtime_error("Undefined variable: " + lval->ident);
             } 
 
-
-            if(symbol -> type == SymbolType::CONST){
-                auto value = std::make_unique<IntegerIRValue>();
-                value -> value = symbol ->const_value;
-                return value;
-            }
-            else if(symbol -> type == SymbolType::VAR){
-                std::string temp_name = generate_temp_name();
-
-                auto load = std::make_unique<LoadIRValue>();
-                load ->result_name = temp_name;
-                load ->src = symbol->ir_name;  // 使用 symbol->ir_name
-                ctx.current_block->ADD_Value(std::move(load));
-
-                auto temp = std::make_unique<TemporaryIRValue>();
-                temp -> temp_name = temp_name;
-                return temp;
+            if (lval->type == LValAST::ARRAY) {
+                // Array access: arr[i]
+                auto index_val = visitExp(dynamic_cast<ExpAST*>(lval->address.get()));
                 
+                auto gep = std::make_unique<GetElemPtrIRValue>();
+                std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                gep->result_name = ptr_name;
+                gep->src = symbol->ir_name;
+                gep->index = std::move(index_val);
+                ctx.current_block->ADD_Value(std::move(gep));
+                
+                std::string temp_name = generate_temp_name();
+                auto load = std::make_unique<LoadIRValue>();
+                load->result_name = temp_name;
+                load->src = ptr_name;
+                ctx.current_block->ADD_Value(std::move(load));
+                
+                auto temp = std::make_unique<TemporaryIRValue>();
+                temp->temp_name = temp_name;
+                return temp;
+            } else {
+                if(symbol -> type == SymbolType::CONST){
+                    auto value = std::make_unique<IntegerIRValue>();
+                    value -> value = symbol ->const_value;
+                    return value;
+                }
+                else if(symbol -> type == SymbolType::VAR){
+                    std::string temp_name = generate_temp_name();
+
+                    auto load = std::make_unique<LoadIRValue>();
+                    load ->result_name = temp_name;
+                    load ->src = symbol->ir_name;  // 使用 symbol->ir_name
+                    ctx.current_block->ADD_Value(std::move(load));
+
+                    auto temp = std::make_unique<TemporaryIRValue>();
+                    temp -> temp_name = temp_name;
+                    return temp;
+                }
             }
-            
         }
     }
     return nullptr;
