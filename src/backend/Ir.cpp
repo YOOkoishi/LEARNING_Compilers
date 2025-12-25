@@ -866,20 +866,7 @@ void GlobalAllocIRValue::To_RiscV() const {
         if (!init_list.empty()) {
             total_bytes = init_list.size() * 4;
         } else {
-            // 从 data_type 中解析数组大小: [i32, N]
-            // data_type 格式: [i32, N]
-            size_t pos1 = data_type.find(',');
-            if (pos1 != std::string::npos) {
-                size_t pos2 = data_type.find(']', pos1);
-                if (pos2 != std::string::npos) {
-                    std::string size_str = data_type.substr(pos1 + 1, pos2 - pos1 - 1);
-                    // 去除空格
-                    size_str.erase(0, size_str.find_first_not_of(" \t"));
-                    size_str.erase(size_str.find_last_not_of(" \t") + 1);
-                    int array_size = std::stoi(size_str);
-                    total_bytes = array_size * 4;
-                }
-            }
+            total_bytes = float_size * 4 ;
         }
         
         if (!init_list.empty()) {

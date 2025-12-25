@@ -657,7 +657,7 @@ std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast,int a
         }
     }
     else if(ast -> type == ConstInitValAST::ZEROINIT){
-
+        return {};
     }
     return init_list;
 }
@@ -766,11 +766,12 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             global_alloc->type = GlobalAllocIRValue::ARRAY;
             global_alloc->var_name = ir_name;
             global_alloc->data_type = "[i32, " + std::to_string(array_size) + "]";
-            
+            global_alloc->float_size = array_size; 
+
             if(ast->type == VarDefAST::ARRAYDEF){
                 global_alloc->init_list = evaluateGlobalInitVal(dynamic_cast<InitValAST*>(ast->initval.get()), array_size);
             } else {
-                global_alloc->init_list.resize(array_size, 0);
+                global_alloc->init_list = {};
             }
             ctx.program->ADD_Globalvalue(std::move(global_alloc));
         } else {
@@ -802,7 +803,7 @@ std::vector<int> IRGenerator::evaluateGlobalInitVal(const InitValAST* ast, int a
             init_list.push_back(0);
         }
     } else if (ast->type == InitValAST::ZEROINIT) {
-        init_list.resize(array_size, 0);
+        return {};
     }
     return init_list;
 }
