@@ -174,6 +174,10 @@ public:
 
     std::unique_ptr<IRProgram> get_irprogram();
 
+
+    std::string generate_data_type(const std::vector<int>& dim);
+    std::vector<int> generate_float_array(const InitValAST* ast, const std::vector<int>& dim);
+
     void setCurrentBlock(IRBasicBlock* block){
         ctx.current_block = block;
     }

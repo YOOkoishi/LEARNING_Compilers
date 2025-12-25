@@ -1,4 +1,4 @@
-int arr[65536];
+int arr[65536][2];
 
 int main() {
   int arr[4096] = {1};
