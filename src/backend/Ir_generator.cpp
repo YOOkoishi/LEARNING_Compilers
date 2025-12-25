@@ -583,8 +583,17 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
 
     }
     else if(ast -> type == ConstDefAST::ARRAY){
-        int array_size = evaluateConstExp(ast ->constexp.get());
-        std::vector<int> dims = {array_size};
+        int array_size = 1;
+        std::vector<int> dims = {};
+        if(auto dimlist = dynamic_cast<ConstExpListAST*>(ast->dimlist.get())){
+            for(auto &i : dimlist->constexplist){
+                if(auto dim = dynamic_cast<ConstExpAST*>(i.get())){
+                    int current_dim = evaluateConstExp(dim);
+                    array_size *= current_dim; 
+                    dims.push_back(current_dim);
+                }
+            }
+        }
         auto initval = visitConstInitVal(dynamic_cast<ConstInitValAST*>( ast -> constinitval.get()) , array_size);
      
         try
@@ -644,7 +653,7 @@ std::vector<int> IRGenerator::visitConstInitVal(const ConstInitValAST* ast,int a
     if(!ast) return {};
     std::vector<int> init_list;
     if(ast -> type ==  ConstInitValAST::CONSTLIST){
-        if(auto constlist = dynamic_cast<ConstExpListAST*>(ast->constlist.get())){
+        if(auto constlist = dynamic_cast<ConstExpListAST*>(ast->constinitlist.get())){
             for(const auto &i : constlist->constexplist){
                 if(auto constexp = dynamic_cast<ConstExpAST*>(i.get())){
                     init_list.push_back(evaluateConstExp(constexp));
@@ -750,9 +759,17 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
         }     
     }
     else if(ast->type == VarDefAST::ARRAY || ast->type == VarDefAST::ARRAYDEF){
-        int array_size = evaluateConstExp(ast->constexp.get());
-        std::vector<int> dims = {array_size};
-        
+        int array_size = 1;
+        std::vector<int> dims = {};
+        if(auto dimlist = dynamic_cast<ConstExpListAST*>(ast->dimlist.get())){
+            for(auto &i : dimlist->constexplist){
+                if(auto dim = dynamic_cast<ConstExpAST*>(i.get())){
+                    int current_dim = evaluateConstExp(dim);
+                    array_size *= current_dim; 
+                    dims.push_back(current_dim);
+                }
+            }
+        }     
         std::string ir_name;
         try {
             ir_name = ctx.symbol_table->declareArray(ast->ident, SymbolType::VAR, DataType::ARRAY, dims);
@@ -794,7 +811,7 @@ std::vector<int> IRGenerator::evaluateGlobalInitVal(const InitValAST* ast, int a
     std::vector<int> init_list;
     
     if (ast->type == InitValAST::ARRAY) {
-        if (auto explist = dynamic_cast<ExpListAST*>(ast->explist.get())) {
+        if (auto explist = dynamic_cast<ExpListAST*>(ast->initlist.get())) {
             for (const auto& exp : explist->explist) {
                 init_list.push_back(evaluateConstExp(exp.get()));
             }
@@ -813,7 +830,7 @@ void IRGenerator::visitArrayInit(const std::string& base_addr, const InitValAST*
     
     if (ast->type == InitValAST::ARRAY) {
         int index = 0;
-        if (auto explist = dynamic_cast<ExpListAST*>(ast->explist.get())) {
+        if (auto explist = dynamic_cast<ExpListAST*>(ast->initlist.get())) {
             for (const auto& exp_ast : explist->explist) {
                 if (index >= array_size) break;
                 

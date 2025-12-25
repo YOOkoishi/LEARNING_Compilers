@@ -74,6 +74,7 @@ using namespace std;
 %type <ast_val> AddExp MulExp LOrExp EqExp RelExp LAndExp Exp UnaryExp PrimaryExp ConstExp ArrayDeclarator ArrayAddress
 %type <ast_val> Decl ConstDecl ConstDef ConstInitVal BlockItem BlockItems Lval ConstDefs BType
 %type <ast_val> VarDecl VarDef VarDefs InitVal FuncFParams FuncFParam FuncRParams ConstList ExpList
+%type <ast_val> InitValList ConstInitValList 
 /* %type <int_val>  */
 %type <str_val> UnaryOp
 
@@ -288,17 +289,17 @@ VarDef
     vardef -> initval = unique_ptr<BaseAST>($3);
     $$ = vardef.release();
   }
-  | IDENT '[' ConstExp ']' {
+  | IDENT ArrayDeclarator {
     auto vardef = make_unique<VarDefAST>(VarDefAST::ARRAY);
     vardef -> ident = *unique_ptr<string>($1);
-    vardef -> constexp = unique_ptr<BaseAST>($3);
+    vardef -> dimlist = unique_ptr<BaseAST>($2);
     $$ = vardef.release();
   } 
-  | IDENT '[' ConstExp ']' '=' InitVal {
+  | IDENT ArrayDeclarator '=' InitVal {
     auto vardef = make_unique<VarDefAST>(VarDefAST::ARRAYDEF);
     vardef -> ident = *unique_ptr<string>($1);
-    vardef -> constexp = unique_ptr<BaseAST>($3);
-    vardef -> initval = unique_ptr<BaseAST>($6);
+    vardef -> dimlist = unique_ptr<BaseAST>($2);
+    vardef -> initval = unique_ptr<BaseAST>($4);
     $$ = vardef.release();
   }
   ;
@@ -311,9 +312,9 @@ InitVal
     initval -> exp = unique_ptr<BaseAST>($1);
     $$ = initval.release();
   }
-  | '{' ExpList '}'{
+  | '{' InitValList '}'{
     auto initval = make_unique<InitValAST>(InitValAST::ARRAY);
-    initval -> explist = unique_ptr<BaseAST>($2);
+    initval -> initlist = unique_ptr<BaseAST>($2);
     $$ = initval.release();
   }
   | '{' '}' {
@@ -322,9 +323,32 @@ InitVal
   }
   ;
 
+InitValList
+  : InitVal {
+    auto list = make_unique<InitValListAST>();
+    list -> initlist.push_back(unique_ptr<BaseAST>($1));
+    $$ = list.release();
+  }
+  | InitValList ',' InitVal {
+    auto list = dynamic_cast<InitValListAST*>($1);
+    list -> initlist.push_back(unique_ptr<BaseAST>($3));
+    $$ = list;
+  }
+  ;
 
 
-
+ConstInitValList
+  : ConstInitVal {
+    auto list = make_unique<ConstInitValListAST>();
+    list -> constinitlist.push_back(unique_ptr<BaseAST>($1));
+    $$ = list.release();
+  }
+  | ConstInitValList ',' ConstInitVal {
+    auto list = dynamic_cast<ConstInitValListAST*>($1);
+    list -> constinitlist.push_back(unique_ptr<BaseAST>($3));
+    $$ = list;
+  }
+  ;
 
 
 ConstDecl 
@@ -373,11 +397,11 @@ ConstDef
     $$ = constdef.release();    
 
   }
-  | IDENT '[' ConstExp ']' '=' ConstInitVal {
+  | IDENT ArrayDeclarator '=' ConstInitVal {
     auto constdef = make_unique<ConstDefAST>(ConstDefAST::ARRAY);
     constdef -> ident = *unique_ptr<string>($1);
-    constdef -> constexp = unique_ptr<BaseAST>($3);
-    constdef -> constinitval = unique_ptr<BaseAST>($6);
+    constdef -> dimlist = unique_ptr<BaseAST>($2);
+    constdef -> constinitval = unique_ptr<BaseAST>($4);
     $$ = constdef.release();    
   }
   ;
@@ -390,9 +414,9 @@ ConstInitVal
     constinitval -> constexp = unique_ptr<BaseAST>($1);
     $$ = constinitval.release();
   }
-  | '{' ConstList '}' {
+  | '{' ConstInitValList '}' {
     auto constinitval = make_unique<ConstInitValAST>(ConstInitValAST::CONSTLIST);
-    constinitval -> constlist = unique_ptr<BaseAST>($2);
+    constinitval -> constinitlist = unique_ptr<BaseAST>($2);
     $$ = constinitval.release();
   }
   | '{' '}' {
@@ -490,6 +514,20 @@ ConstList
   ;
 
 
+ArrayDeclarator
+  : '[' ConstExp ']' {
+    auto constexplist = make_unique<ConstExpListAST>();
+    constexplist -> constexplist.push_back(unique_ptr<BaseAST>($2));
+    $$ = constexplist.release();
+  }
+  | ArrayDeclarator '[' ConstExp ']' {
+    auto constexplist = dynamic_cast<ConstExpListAST*>($1);
+    constexplist -> constexplist.push_back(unique_ptr<BaseAST>($3));
+    $$ = constexplist;
+  }
+
+
+
 
 ExpList
   : Exp {
@@ -504,7 +542,17 @@ ExpList
   }
 
 
-
+ArrayAddress
+  : '[' Exp ']'{
+    auto explist = make_unique<ExpListAST>();
+    explist -> explist.push_back(unique_ptr<BaseAST>($2));
+    $$ = explist.release();
+  }
+  | ArrayAddress '[' Exp ']'{
+    auto explist = dynamic_cast<ExpListAST*>($1);
+    explist -> explist.push_back(unique_ptr<BaseAST>($3));
+    $$ = explist;
+  }
 
 
 Exp 
@@ -767,10 +815,10 @@ Lval
     $$ = lval.release();
 
   }
-  | IDENT '[' Exp ']' {
+  | IDENT ArrayAddress {
     auto lval = make_unique<LValAST>(LValAST::ARRAY);
     lval -> ident = *unique_ptr<string>($1);
-    lval -> address = unique_ptr<BaseAST>($3);
+    lval -> address = unique_ptr<BaseAST>($2);
     $$ = lval.release();
   }
   ;

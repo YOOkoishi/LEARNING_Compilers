@@ -355,7 +355,7 @@ public:
     ConstDefAST(Type t): type(t){};
     
     std::string ident;
-    std::unique_ptr<BaseAST> constexp;
+    std::unique_ptr<BaseAST> dimlist;
     std::unique_ptr<BaseAST> constinitval;
     void Dump() const override;
     
@@ -372,7 +372,7 @@ public:
 
     ConstInitValAST() =default;
     ConstInitValAST(Type t) : type(t){};
-    std::unique_ptr<BaseAST> constlist;
+    std::unique_ptr<BaseAST> constinitlist;  // 改为 ConstInitValListAST
     std::unique_ptr<BaseAST> constexp;
     void Dump() const override;
 };
@@ -389,6 +389,22 @@ public:
 class ExpListAST : public BaseAST {
 public:
     std::vector<std::unique_ptr<BaseAST>> explist;
+    void Dump() const override;
+};
+
+
+
+class InitValListAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> initlist;
+    void Dump() const override;
+};
+
+
+
+class ConstInitValListAST : public BaseAST {
+public:
+    std::vector<std::unique_ptr<BaseAST>> constinitlist;
     void Dump() const override;
 };
 
@@ -451,7 +467,7 @@ public:
 
     std::string ident;
     std::unique_ptr<BaseAST> initval;
-    std::unique_ptr<BaseAST> constexp;
+    std::unique_ptr<BaseAST> dimlist;
 
     void Dump() const override;
 };
@@ -473,7 +489,7 @@ public:
 
 
     std::unique_ptr<BaseAST> exp;
-    std::unique_ptr<BaseAST> explist;
+    std::unique_ptr<BaseAST> initlist;  // 改为 InitValListAST
 
     void Dump() const override;
 };

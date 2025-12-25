@@ -937,7 +937,7 @@ void GetElemPtrIRValue::To_RiscV() const {
         } else {
             // Not a parameter.
             // Check if it is a temporary (getelemptr result, starts with %ptr or %[0-9])
-            bool is_temp_ptr = (src.length() > 1 && src[0] == '%');
+            // bool is_temp_ptr = (src.length() > 1 && src[0] == '%');
             
             int src_offset = stack.getOffset(src);
             

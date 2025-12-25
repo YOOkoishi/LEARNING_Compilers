@@ -352,3 +352,10 @@ void ConstExpListAST :: Dump() const {
 
 }
 
+void ConstInitValListAST :: Dump() const {
+
+}
+
+void InitValListAST :: Dump() const {
+    
+}
