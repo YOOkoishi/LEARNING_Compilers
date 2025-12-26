@@ -1,0 +1,23 @@
+// 测试用例8: 常量数组初始化
+// const int arr[2][3] = {{1, 2}, {3, 4, 5}}
+// 预期内存布局: [1, 2, 0, 3, 4, 5]
+
+int main() {
+    const int arr[2][3] = {{1, 2}, {3, 4, 5}};
+    
+    // 验证每个元素
+    putint(arr[0]);  // 1
+    putch(32);
+    putint(arr[1]);  // 2
+    putch(32);
+    putint(arr[2]);  // 0
+    putch(32);
+    putint(arr[3]);  // 3
+    putch(32);
+    putint(arr[4]);  // 4
+    putch(32);
+    putint(arr[5]);  // 5
+    putch(10);
+    
+    return 0;
+}

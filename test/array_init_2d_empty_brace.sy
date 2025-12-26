@@ -1,0 +1,23 @@
+// 测试用例5: 二维数组 - 空大括号
+// int arr[2][3] = {{}, {1}}
+// 预期内存布局: [0, 0, 0, 1, 0, 0]
+
+int main() {
+    int arr[2][3] = {{}, {1}};
+    
+    // 验证每个元素
+    putint(arr[0]);  // 0
+    putch(32);
+    putint(arr[1]);  // 0
+    putch(32);
+    putint(arr[2]);  // 0
+    putch(32);
+    putint(arr[3]);  // 1
+    putch(32);
+    putint(arr[4]);  // 0
+    putch(32);
+    putint(arr[5]);  // 0
+    putch(10);
+    
+    return 0;
+}

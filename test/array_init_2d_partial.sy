@@ -1,0 +1,23 @@
+// 测试用例3: 二维数组 - 部分初始化 (省略元素)
+// int arr[2][3] = {{1, 2}, {3}}
+// 预期内存布局: [1, 2, 0, 3, 0, 0]
+
+int main() {
+    int arr[2][3] = {{1, 2}, {3}};
+    
+    // 验证每个元素
+    putint(arr[0]);  // 1
+    putch(32);
+    putint(arr[1]);  // 2
+    putch(32);
+    putint(arr[2]);  // 0
+    putch(32);
+    putint(arr[3]);  // 3
+    putch(32);
+    putint(arr[4]);  // 0
+    putch(32);
+    putint(arr[5]);  // 0
+    putch(10);
+    
+    return 0;
+}

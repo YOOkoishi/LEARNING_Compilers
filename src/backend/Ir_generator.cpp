@@ -594,55 +594,56 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
                 }
             }
         }
-        auto initval = visitConstInitVal(dynamic_cast<ConstInitValAST*>( ast -> constinitval.get()) , array_size);
-     
-        try
-        {
-            std::string ir_name = ctx.symbol_table->declareArray(
-                ast->ident,
-                SymbolType::CONST,
-                DataType::ARRAY,
-                dims,
-                initval
-            );
-
-            if (ctx.symbol_table->getCurrentScopeLevel() == 0) {
-                // Global constant array
-                auto global_alloc = std::make_unique<GlobalAllocIRValue>();
-                global_alloc->type = GlobalAllocIRValue::ARRAY;
-                global_alloc->var_name = ir_name;
-                global_alloc->data_type = generate_data_type(dims);
-                global_alloc->init_list = initval;
-                global_alloc->float_size = array_size;
-                program->global_value.push_back(std::move(global_alloc));
-            } else {
-                // Local constant array
-                auto alloc = std::make_unique<AllocIRValue>();
-                alloc->type = AllocIRValue::ARRAY;
-                alloc->var_name = ir_name;
-                alloc->data_type = generate_data_type(dims);
-                alloc->size = array_size * 4;
-                ctx.current_block->ADD_Value(std::move(alloc));
-
-                // Initialize local array
-                for(int i=0; i<array_size; ++i) {
-                    auto gep = std::make_unique<GetElemPtrIRValue>();
-                    std::string ptr_name = "%ptr_" + ir_name.substr(1) + "_" + std::to_string(i) + "_" + std::to_string(blockcount++); 
-                    gep->result_name = ptr_name;
-                    gep->src = ir_name;
-                    gep->index = std::make_unique<IntegerIRValue>(i);
-                    ctx.current_block->ADD_Value(std::move(gep));
-
-                    auto store = std::make_unique<StoreIRValue>();
-                    store->value = std::make_unique<IntegerIRValue>(initval[i]);
-                    store->dest = ptr_name;
-                    ctx.current_block->ADD_Value(std::move(store));
+        if(auto constinitval =  dynamic_cast<ConstInitValAST*>(ast->constinitval.get())){
+            auto initval = flatten_const_array(constinitval,dims);
+            try
+            {
+                std::string ir_name = ctx.symbol_table->declareArray(
+                    ast->ident,
+                    SymbolType::CONST,
+                    DataType::ARRAY,
+                    dims,
+                    initval
+                );
+    
+                if (ctx.symbol_table->getCurrentScopeLevel() == 0) {
+                    // Global constant array
+                    auto global_alloc = std::make_unique<GlobalAllocIRValue>();
+                    global_alloc->type = GlobalAllocIRValue::ARRAY;
+                    global_alloc->var_name = ir_name;
+                    global_alloc->data_type = generate_data_type(dims);
+                    global_alloc->init_list = initval;
+                    global_alloc->float_size = array_size;
+                    program->global_value.push_back(std::move(global_alloc));
+                } else {
+                    // Local constant array
+                    auto alloc = std::make_unique<AllocIRValue>();
+                    alloc->type = AllocIRValue::ARRAY;
+                    alloc->var_name = ir_name;
+                    alloc->data_type = generate_data_type(dims);
+                    alloc->size = array_size * 4;
+                    ctx.current_block->ADD_Value(std::move(alloc));
+    
+                    // Initialize local array
+                    for(int i=0; i<array_size; ++i) {
+                        auto gep = std::make_unique<GetElemPtrIRValue>();
+                        std::string ptr_name = "%ptr_" + ir_name.substr(1) + "_" + std::to_string(i) + "_" + std::to_string(blockcount++); 
+                        gep->result_name = ptr_name;
+                        gep->src = ir_name;
+                        gep->index = std::make_unique<IntegerIRValue>(i);
+                        ctx.current_block->ADD_Value(std::move(gep));
+    
+                        auto store = std::make_unique<StoreIRValue>();
+                        store->value = std::make_unique<IntegerIRValue>(initval[i]);
+                        store->dest = ptr_name;
+                        ctx.current_block->ADD_Value(std::move(store));
+                    }
                 }
             }
-        }
-        catch(const std::runtime_error& e)
-        {
-            std::cerr << "Error in constant declaration" << e.what() << '\n';
+            catch(const std::runtime_error& e)
+            {
+                std::cerr << "Error in constant declaration" << e.what() << '\n';
+            }
         }
     }
 }
@@ -791,7 +792,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             global_alloc->float_size = array_size; 
 
             if(ast->type == VarDefAST::ARRAYDEF){
-                global_alloc->init_list = evaluateGlobalInitVal(dynamic_cast<InitValAST*>(ast->initval.get()), array_size);
+                global_alloc->init_list = flatten_array(dynamic_cast<InitValAST*>(ast->initval.get()), dims);
             } else {
                 global_alloc->init_list = {};
             }
@@ -805,50 +806,28 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             ctx.current_block->ADD_Value(std::move(alloc));
             
             if(ast->type == VarDefAST::ARRAYDEF){
-                visitArrayInit(ir_name, dynamic_cast<InitValAST*>(ast->initval.get()), array_size);
+                // 使用 flatten_array 获取展平的初始化值
+                auto flat_values = flatten_array(dynamic_cast<InitValAST*>(ast->initval.get()), dims);
+                
+                // 逐个存储到数组元素
+                for(int i = 0; i < array_size; ++i) {
+                    auto gep = std::make_unique<GetElemPtrIRValue>();
+                    std::string ptr_name = "%ptr_" + ir_name.substr(1) + "_" + 
+                                           std::to_string(i) + "_" + std::to_string(blockcount++);
+                    gep->result_name = ptr_name;
+                    gep->src = ir_name;
+                    gep->index = std::make_unique<IntegerIRValue>(i);
+                    ctx.current_block->ADD_Value(std::move(gep));
+                    
+                    auto store = std::make_unique<StoreIRValue>();
+                    store->value = std::make_unique<IntegerIRValue>(flat_values[i]);
+                    store->dest = ptr_name;
+                    ctx.current_block->ADD_Value(std::move(store));
+                }
             }
         }
     }
 }
-
-void IRGenerator::visitArrayInit(const std::string& base_addr, const InitValAST* ast, int array_size) {
-    if (!ast) return;
-    
-    if (ast->type == InitValAST::ARRAY) {
-        int index = 0;
-        if (auto explist = dynamic_cast<ExpListAST*>(ast->initlist.get())) {
-            for (const auto& exp_ast : explist->explist) {
-                if (index >= array_size) break;
-                
-                auto val = visitExp(dynamic_cast<ExpAST*>(exp_ast.get()));
-                
-                auto gep = std::make_unique<GetElemPtrIRValue>();
-                std::string ptr_name = "%ptr_" + base_addr.substr(1) + "_" + std::to_string(index) + "_" + std::to_string(blockcount++);
-                gep->result_name = ptr_name;
-                gep->src = base_addr;
-                gep->index = std::make_unique<IntegerIRValue>(index);
-                ctx.current_block->ADD_Value(std::move(gep));
-                
-                auto store = std::make_unique<StoreIRValue>();
-                store->value = std::move(val);
-                store->dest = ptr_name;
-                ctx.current_block->ADD_Value(std::move(store));
-                
-                index++;
-            }
-        }
-        
-        
-    } else if (ast->type == InitValAST::ZEROINIT) {
-
-    }
-}
-
-
-
-
-
-
 
 
 /*
@@ -1401,23 +1380,28 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
 
             if (lval->type == LValAST::ARRAY) {
                 // Array access: arr[i]
-                auto index_val = visitExp(dynamic_cast<ExpAST*>(lval->address.get()));
-                
-                auto gep = std::make_unique<GetElemPtrIRValue>();
-                std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
-                gep->result_name = ptr_name;
-                gep->src = symbol->ir_name;
-                gep->index = std::move(index_val);
-                ctx.current_block->ADD_Value(std::move(gep));
-                
+                auto index_list = dynamic_cast<ExpListAST*>(lval->address.get());
+                std::string mid_result_name = symbol->ir_name;
+                for(auto &item : index_list->explist){
+                    if(auto exp = dynamic_cast<ExpAST*>(item.get())){
+                        auto index_val = visitExp(exp);
+                        auto gep = std::make_unique<GetElemPtrIRValue>();
+                        std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                        gep->result_name = ptr_name;
+                        gep->src = mid_result_name;
+                        gep->index = std::move(index_val);
+                        ctx.current_block->ADD_Value(std::move(gep));
+                        mid_result_name = ptr_name;
+                        
+                    }    
+                }
                 std::string temp_name = generate_temp_name();
                 auto load = std::make_unique<LoadIRValue>();
                 load->result_name = temp_name;
-                load->src = ptr_name;
+                load->src = mid_result_name;
                 ctx.current_block->ADD_Value(std::move(load));
-                
                 auto temp = std::make_unique<TemporaryIRValue>();
-                temp->temp_name = temp_name;
+                temp->temp_name = mid_result_name;
                 return temp;
             } else {
                 if(symbol -> type == SymbolType::CONST){

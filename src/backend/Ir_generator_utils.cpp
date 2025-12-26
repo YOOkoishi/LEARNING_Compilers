@@ -194,6 +194,311 @@ std::string IRGenerator::generate_data_type(const std::vector<int> &dim){
 
 
 
-std::vector<int> IRGenerator::generate_float_array(const InitValAST* ast, const std::vector<int>& dim){
-    
+// 辅助函数：计算从第 start_dim 维开始的子数组容量
+int IRGenerator::calculate_sub_capacity(const std::vector<int>& dims, int start_dim) {
+    int capacity = 1;
+    for (int i = start_dim; i < static_cast<int>(dims.size()); ++i) {
+        capacity *= dims[i];
+    }
+    return capacity;
 }
+
+int IRGenerator::find_alignment_dim(int cursor, const std::vector<int>& dims) {
+    if (cursor == 0) return 0;  // 起始位置总是对齐第0维
+    
+    // 从最外层开始检查（索引最小的维度），找到第一个能整除的维度
+    // 第i维的步长 = dims[i+1] * dims[i+2] * ... * dims[n-1]
+    // 即 calculate_sub_capacity(dims, i+1)
+    // 例如 int[2][3][4]:
+    //   - dim0步长 = 3*4 = 12
+    //   - dim1步长 = 4
+    //   - dim2步长 = 1
+    //   - cursor=4: 4%12≠0, 4%4==0 → 返回1，对应int[4]
+    //   - cursor=12: 12%12==0 → 返回0，对应int[3][4]
+    for (int i = 0; i < static_cast<int>(dims.size()); ++i) {
+        int stride = calculate_sub_capacity(dims, i + 1);
+        if (cursor % stride == 0) {
+            return i;
+        }
+    }
+    
+    return -1;  // 未对齐任何维度
+}
+
+void IRGenerator::flatten_initval_recursive(
+    const InitValAST* node,
+    const std::vector<int>& dims,
+    int& cursor,
+    std::vector<int>& result
+) {
+    if (!node) return;
+    
+    // 检查1: 维度是否为空
+    if (dims.empty()) {
+        throw std::runtime_error(
+            "Too many nesting levels in initializer (exceeded array dimensions)"
+        );
+    }
+    
+    if (node->type == InitValAST::EXP) {
+        // 情况1: 标量 - 直接填充
+        if (cursor >= result.size()) {
+            throw std::runtime_error("Array initializer overflow");
+        }
+        result[cursor++] = evaluateConstExp(node->exp.get());
+    }
+    else if (node->type == InitValAST::ZEROINIT) {
+        // 情况2: 空列表 {} - 填充0到对齐边界
+        int align_dim = find_alignment_dim(cursor, dims);
+        if (align_dim == -1) {
+            throw std::runtime_error(
+                "Empty initializer {} at position " + std::to_string(cursor) +
+                " is not aligned to any dimension boundary"
+            );
+        }
+        
+        // 检查2: 是否有子维度可以填充
+        if (align_dim + 1 >= dims.size()) {
+            throw std::runtime_error(
+                "Empty initializer {} used for scalar element at position " +
+                std::to_string(cursor)
+            );
+        }
+        
+        // 计算子维度的容量
+        int sub_capacity = 1;
+        for (int i = align_dim + 1; i < dims.size(); ++i) {
+            sub_capacity *= dims[i];
+        }
+        
+        // 填充0
+        for (int i = 0; i < sub_capacity && cursor < result.size(); ++i) {
+            result[cursor++] = 0;
+        }
+    }
+    else if (node->type == InitValAST::ARRAY) {
+        // 情况3: 嵌套列表 {...}
+        int list_start = cursor;
+        
+        // 对齐检查
+        int align_dim = find_alignment_dim(cursor, dims);
+        if (align_dim == -1) {
+            throw std::runtime_error(
+                "Nested initializer at position " + std::to_string(cursor) +
+                " is not aligned to any dimension boundary"
+            );
+        }
+        
+        // 提取子维度
+        std::vector<int> sub_dims(dims.begin() + align_dim + 1, dims.end());
+        
+        // 计算当前 {} 对应的子数组大小
+        int sub_capacity = sub_dims.empty() ? 1 : calculate_sub_capacity(sub_dims, 0);
+        
+        // 递归处理列表中的每个元素
+        auto initlist = dynamic_cast<InitValListAST*>(node->initlist.get());
+        if (initlist) {
+            for (const auto& child : initlist->initlist) {
+                auto child_initval = dynamic_cast<InitValAST*>(child.get());
+                if (!sub_dims.empty()) {
+                    // 还有子维度，继续递归
+                    flatten_initval_recursive(child_initval, sub_dims, cursor, result);
+                } else {
+                    // 子维度为空，当前元素应该是标量
+                    if (child_initval) {
+                        if (child_initval->type == InitValAST::EXP) {
+                            if (cursor < static_cast<int>(result.size())) {
+                                result[cursor++] = evaluateConstExp(child_initval->exp.get());
+                            }
+                        } else {
+                            // 嵌套的 {} 或 ZEROINIT 在最后一维，这是语义错误
+                            throw std::runtime_error(
+                                "Nested braces in scalar context at position " + std::to_string(cursor)
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 关键：填充到子数组边界
+        // 每个 {} 会"消耗"其对齐维度对应的完整子数组空间
+        int target = list_start + sub_capacity;
+        while (cursor < target && cursor < static_cast<int>(result.size())) {
+            result[cursor++] = 0;
+        }
+    }
+}
+
+std::vector<int> IRGenerator::flatten_array(const InitValAST* initval,const std::vector<int>& dims) {
+    // 计算总容量
+    int total_size = 1;
+    for (int d : dims) total_size *= d;
+    
+    // 初始化结果数组（全0）
+    std::vector<int> result(total_size, 0);
+    
+    if (!initval) return result;
+    
+    int cursor = 0;
+    
+    if (initval->type == InitValAST::ARRAY) {
+        // 最外层是列表 {...}
+        auto initlist = dynamic_cast<InitValListAST*>(initval->initlist.get());
+        if (initlist) {
+            for (const auto& child : initlist->initlist) {
+                auto child_initval = dynamic_cast<InitValAST*>(child.get());
+                flatten_initval_recursive(child_initval, dims, cursor, result);
+            }
+        }
+    } 
+    else if (initval->type == InitValAST::EXP) {
+        // 单个表达式初始化整个数组（少见但可能）
+        result[0] = evaluateConstExp(initval->exp.get());
+    }
+    else if (initval->type == InitValAST::ZEROINIT) {
+        // 空列表 {} - 已经是全0，直接返回
+    }
+    
+    return result;
+}
+
+
+void IRGenerator::flatten_constinitval_recursive(const ConstInitValAST* node,const std::vector<int>& dims,int& cursor,std::vector<int>& result
+) {
+    if (!node) return;
+    
+    // 检查1: 维度是否为空
+    if (dims.empty()) {
+        throw std::runtime_error(
+            "Too many nesting levels in initializer (exceeded array dimensions)"
+        );
+    }
+    
+    if (node->type == ConstInitValAST::CONSTEXP) {
+        // 情况1: 常量表达式 - 直接填充
+        if (cursor >= result.size()) {
+            throw std::runtime_error("Array initializer overflow");
+        }
+        result[cursor++] = evaluateConstExp(node->constexp.get());
+    }
+    else if (node->type == ConstInitValAST::ZEROINIT) {
+        // 情况2: 空列表 {} - 填充0到对齐边界
+        int align_dim = find_alignment_dim(cursor, dims);
+        if (align_dim == -1) {
+            throw std::runtime_error( 
+                "Empty initializer {} at position " + std::to_string(cursor) +
+                " is not aligned to any dimension boundary"
+            );
+        }
+        
+        // 检查2: 是否有子维度可以填充
+        if (align_dim + 1 >= dims.size()) {
+            throw std::runtime_error(
+                "Empty initializer {} used for scalar element at position " +
+                std::to_string(cursor)
+            );
+        }
+        
+        // 计算子维度的容量
+        int sub_capacity = 1;
+        for (int i = align_dim + 1; i < dims.size(); ++i) {
+            sub_capacity *= dims[i];
+        }
+        
+        // 填充0
+        for (int i = 0; i < sub_capacity && cursor < result.size(); ++i) {
+            result[cursor++] = 0;
+        }
+    }
+    else if (node->type == ConstInitValAST::CONSTLIST) {
+        // 情况3: 嵌套列表 {...}
+        int list_start = cursor;
+        
+        // 对齐检查
+        int align_dim = find_alignment_dim(cursor, dims);
+        if (align_dim == -1) {
+            throw std::runtime_error(
+                "Nested initializer at position " + std::to_string(cursor) +
+                " is not aligned to any dimension boundary"
+            );
+        }
+        
+        // 提取子维度
+        std::vector<int> sub_dims(dims.begin() + align_dim + 1, dims.end());
+        
+        // 计算当前 {} 对应的子数组大小
+        int sub_capacity = sub_dims.empty() ? 1 : calculate_sub_capacity(sub_dims, 0);
+        
+        // 递归处理列表中的每个元素
+        auto initlist = dynamic_cast<ConstInitValListAST*>(node->constinitlist.get());
+        if (initlist) {
+            for (const auto& child : initlist->constinitlist) {
+                auto child_initval = dynamic_cast<ConstInitValAST*>(child.get());
+                if (!sub_dims.empty()) {
+                    // 还有子维度，继续递归
+                    flatten_constinitval_recursive(child_initval, sub_dims, cursor, result);
+                } else {
+                    // 子维度为空，当前元素应该是常量表达式
+                    if (child_initval) {
+                        if (child_initval->type == ConstInitValAST::CONSTEXP) {
+                            if (cursor < static_cast<int>(result.size())) {
+                                result[cursor++] = evaluateConstExp(child_initval->constexp.get());
+                            }
+                        } else {
+                            // 嵌套的 {} 或 ZEROINIT 在最后一维，这是语义错误
+                            throw std::runtime_error(
+                                "Nested braces in scalar context at position " + std::to_string(cursor)
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 关键：填充到子数组边界
+        int target = list_start + sub_capacity;
+        while (cursor < target && cursor < static_cast<int>(result.size())) {
+            result[cursor++] = 0;
+        }
+    }
+}
+
+
+
+
+
+std::vector<int> IRGenerator::flatten_const_array(const ConstInitValAST* initval,const std::vector<int>& dims) {
+    // 计算总容量
+    int total_size = 1;
+    for (int d : dims) total_size *= d;
+    
+    // 初始化结果数组（全0）
+    std::vector<int> result(total_size, 0);
+    
+    if (!initval) return result;
+    
+    int cursor = 0;
+    
+    if (initval->type == ConstInitValAST::CONSTLIST) {
+        // 最外层是列表 {...}
+        auto initlist = dynamic_cast<ConstInitValListAST*>(initval->constinitlist.get());
+        if (initlist) {
+            for (const auto& child : initlist->constinitlist) {
+                auto child_initval = dynamic_cast<ConstInitValAST*>(child.get());
+                flatten_constinitval_recursive(child_initval, dims, cursor, result);
+            }
+        }
+    }
+    else if (initval->type == ConstInitValAST::CONSTEXP) {
+        // 单个常量表达式初始化
+        result[0] = evaluateConstExp(initval->constexp.get());
+    }
+    else if (initval->type == ConstInitValAST::ZEROINIT) {
+        // 空列表 {} - 已经是全0，直接返回
+    }
+
+    return result;
+}
+
+

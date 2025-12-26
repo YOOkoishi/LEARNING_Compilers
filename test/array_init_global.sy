@@ -1,0 +1,22 @@
+// 测试用例9: 全局数组初始化
+// 全局变量在函数外声明
+
+int g_arr[2][3] = {{1, 2, 3}, {4, 5, 6}};
+
+int main() {
+    // 验证全局数组内容
+    putint(g_arr[0]);  // 1
+    putch(32);
+    putint(g_arr[1]);  // 2
+    putch(32);
+    putint(g_arr[2]);  // 3
+    putch(32);
+    putint(g_arr[3]);  // 4
+    putch(32);
+    putint(g_arr[4]);  // 5
+    putch(32);
+    putint(g_arr[5]);  // 6
+    putch(10);
+    
+    return 0;
+}

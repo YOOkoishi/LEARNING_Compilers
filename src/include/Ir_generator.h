@@ -156,7 +156,6 @@ public:
     void visitVarDef(const VarDefAST* ast);
     void visitInitValAST(const InitValAST* ast);
     std::vector<int> evaluateGlobalInitVal(const InitValAST* ast, int array_size);
-    void visitArrayInit(const std::string& base_addr, const InitValAST* ast, int array_size);
     
 
 
@@ -174,9 +173,17 @@ public:
 
     std::unique_ptr<IRProgram> get_irprogram();
 
-
-    std::string generate_data_type(const std::vector<int>& dim);
-    std::vector<int> generate_float_array(const InitValAST* ast, const std::vector<int>& dim);
+    // 多维数组初始化列表处理
+    int calculate_sub_capacity(const std::vector<int>& dims, int start_dim);
+    int find_alignment_dim(int cursor, const std::vector<int>& dims);
+    void flatten_initval_recursive(const InitValAST* node, const std::vector<int>& dims, int& cursor, std::vector<int>& result);
+    std::vector<int> flatten_array(const InitValAST* initval, const std::vector<int>& dims);
+    
+    // const 版本的多维数组初始化列表处理
+    void flatten_constinitval_recursive(const ConstInitValAST* node, const std::vector<int>& dims, int& cursor, std::vector<int>& result);
+    std::vector<int> flatten_const_array(const ConstInitValAST* initval, const std::vector<int>& dims);
+    
+    std::string generate_data_type(const std::vector<int>& dims);
 
     void setCurrentBlock(IRBasicBlock* block){
         ctx.current_block = block;
