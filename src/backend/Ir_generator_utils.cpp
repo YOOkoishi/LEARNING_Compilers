@@ -502,3 +502,229 @@ std::vector<int> IRGenerator::flatten_const_array(const ConstInitValAST* initval
 }
 
 
+// 计算多维数组的线性索引
+// 对于 arr[i][j][k]，其中 dims = {D0, D1, D2}
+// 线性索引 = i * (D1 * D2) + j * D2 + k
+// 即: index[0] * stride[0] + index[1] * stride[1] + ... + index[n-1] * stride[n-1]
+// 其中 stride[i] = dims[i+1] * dims[i+2] * ... * dims[n-1]
+std::unique_ptr<BaseIRValue> IRGenerator::calculate_linear_index(
+    const std::vector<std::unique_ptr<BaseIRValue>>& indices,
+    const std::vector<int>& dims
+) {
+    // 如果没有索引，返回0
+    if (indices.empty()) {
+        auto zero = std::make_unique<IntegerIRValue>();
+        zero->value = 0;
+        return zero;
+    }
+    
+    // 如果只有一个索引，直接返回它的副本
+    if (indices.size() == 1) {
+        // 创建一个临时变量来存储索引值
+        // 先看看索引是否是整数常量
+        if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[0].get())) {
+            auto result = std::make_unique<IntegerIRValue>();
+            result->value = int_val->value;
+            return result;
+        }
+        // 否则是临时变量
+        if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[0].get())) {
+            auto result = std::make_unique<TemporaryIRValue>();
+            result->temp_name = temp_val->temp_name;
+            return result;
+        }
+        // 其他情况，生成一个 add 0 指令
+        std::string result_name = generate_temp_name();
+        auto add_ir = std::make_unique<BinaryIRValue>();
+        add_ir->result_name = result_name;
+        add_ir->operation = BinaryIRValue::ADD;
+        
+        // 复制第一个索引
+        if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[0].get())) {
+            auto copy = std::make_unique<IntegerIRValue>();
+            copy->value = int_val->value;
+            add_ir->left = std::move(copy);
+        } else if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[0].get())) {
+            auto copy = std::make_unique<TemporaryIRValue>();
+            copy->temp_name = temp_val->temp_name;
+            add_ir->left = std::move(copy);
+        }
+        
+        auto zero = std::make_unique<IntegerIRValue>();
+        zero->value = 0;
+        add_ir->right = std::move(zero);
+        ctx.current_block->ADD_Value(std::move(add_ir));
+        
+        auto result = std::make_unique<TemporaryIRValue>();
+        result->temp_name = result_name;
+        return result;
+    }
+    
+    // 计算每个维度的 stride
+    // stride[i] = dims[i+1] * dims[i+2] * ... * dims[n-1]
+    std::vector<int> strides(indices.size());
+    strides[indices.size() - 1] = 1;  // 最后一维的 stride 是 1
+    for (int i = static_cast<int>(indices.size()) - 2; i >= 0; --i) {
+        // stride[i] = stride[i+1] * dims[i+1]
+        // 注意：dims[i+1] 对应的是数组声明中第 i+1 维的大小
+        if (i + 1 < static_cast<int>(dims.size())) {
+            strides[i] = strides[i + 1] * dims[i + 1];
+        } else {
+            strides[i] = strides[i + 1];
+        }
+    }
+    
+    // 累加器：存放当前的线性索引结果
+    std::string accumulator;
+    bool accumulator_is_zero = true;
+    
+    for (size_t i = 0; i < indices.size(); ++i) {
+        std::string term_result;
+        
+        if (strides[i] == 1) {
+            // stride 为 1，不需要乘法
+            if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[i].get())) {
+                // 索引是常量
+                if (int_val->value == 0 && accumulator_is_zero) {
+                    // 0 * 1 = 0，跳过
+                    continue;
+                }
+                if (accumulator_is_zero) {
+                    // 第一项：直接使用常量
+                    auto first = std::make_unique<IntegerIRValue>();
+                    first->value = int_val->value;
+                    
+                    // 生成一个 add 0 的指令来创建临时变量
+                    std::string temp_name = generate_temp_name();
+                    auto add_ir = std::make_unique<BinaryIRValue>();
+                    add_ir->result_name = temp_name;
+                    add_ir->operation = BinaryIRValue::ADD;
+                    add_ir->left = std::move(first);
+                    auto zero = std::make_unique<IntegerIRValue>();
+                    zero->value = 0;
+                    add_ir->right = std::move(zero);
+                    ctx.current_block->ADD_Value(std::move(add_ir));
+                    
+                    accumulator = temp_name;
+                    accumulator_is_zero = false;
+                    continue;
+                }
+                term_result = "";  // 使用常量直接加
+                // 生成 accumulator + int_val->value
+                std::string result_name = generate_temp_name();
+                auto add_ir = std::make_unique<BinaryIRValue>();
+                add_ir->result_name = result_name;
+                add_ir->operation = BinaryIRValue::ADD;
+                
+                auto left = std::make_unique<TemporaryIRValue>();
+                left->temp_name = accumulator;
+                add_ir->left = std::move(left);
+                
+                auto right = std::make_unique<IntegerIRValue>();
+                right->value = int_val->value;
+                add_ir->right = std::move(right);
+                
+                ctx.current_block->ADD_Value(std::move(add_ir));
+                accumulator = result_name;
+                continue;
+            } else if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[i].get())) {
+                // 索引是变量
+                term_result = temp_val->temp_name;
+            }
+        } else {
+            // stride > 1，需要乘法: index[i] * stride[i]
+            if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[i].get())) {
+                // 索引是常量，在编译时计算 index * stride
+                int product = int_val->value * strides[i];
+                if (product == 0 && accumulator_is_zero) {
+                    continue;  // 0 * stride = 0，跳过
+                }
+                if (accumulator_is_zero) {
+                    // 第一项
+                    std::string temp_name = generate_temp_name();
+                    auto add_ir = std::make_unique<BinaryIRValue>();
+                    add_ir->result_name = temp_name;
+                    add_ir->operation = BinaryIRValue::ADD;
+                    auto prod = std::make_unique<IntegerIRValue>();
+                    prod->value = product;
+                    add_ir->left = std::move(prod);
+                    auto zero = std::make_unique<IntegerIRValue>();
+                    zero->value = 0;
+                    add_ir->right = std::move(zero);
+                    ctx.current_block->ADD_Value(std::move(add_ir));
+                    
+                    accumulator = temp_name;
+                    accumulator_is_zero = false;
+                    continue;
+                }
+                // 加到累加器
+                std::string result_name = generate_temp_name();
+                auto add_ir = std::make_unique<BinaryIRValue>();
+                add_ir->result_name = result_name;
+                add_ir->operation = BinaryIRValue::ADD;
+                
+                auto left = std::make_unique<TemporaryIRValue>();
+                left->temp_name = accumulator;
+                add_ir->left = std::move(left);
+                
+                auto right = std::make_unique<IntegerIRValue>();
+                right->value = product;
+                add_ir->right = std::move(right);
+                
+                ctx.current_block->ADD_Value(std::move(add_ir));
+                accumulator = result_name;
+                continue;
+            } else if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[i].get())) {
+                // 索引是变量，生成乘法指令
+                std::string mul_result = generate_temp_name();
+                auto mul_ir = std::make_unique<BinaryIRValue>();
+                mul_ir->result_name = mul_result;
+                mul_ir->operation = BinaryIRValue::MUL;
+                
+                auto left = std::make_unique<TemporaryIRValue>();
+                left->temp_name = temp_val->temp_name;
+                mul_ir->left = std::move(left);
+                
+                auto right = std::make_unique<IntegerIRValue>();
+                right->value = strides[i];
+                mul_ir->right = std::move(right);
+                
+                ctx.current_block->ADD_Value(std::move(mul_ir));
+                term_result = mul_result;
+            }
+        }
+        
+        // 累加到 accumulator
+        if (accumulator_is_zero) {
+            accumulator = term_result;
+            accumulator_is_zero = false;
+        } else {
+            std::string result_name = generate_temp_name();
+            auto add_ir = std::make_unique<BinaryIRValue>();
+            add_ir->result_name = result_name;
+            add_ir->operation = BinaryIRValue::ADD;
+            
+            auto left = std::make_unique<TemporaryIRValue>();
+            left->temp_name = accumulator;
+            add_ir->left = std::move(left);
+            
+            auto right = std::make_unique<TemporaryIRValue>();
+            right->temp_name = term_result;
+            add_ir->right = std::move(right);
+            
+            ctx.current_block->ADD_Value(std::move(add_ir));
+            accumulator = result_name;
+        }
+    }
+    
+    if (accumulator_is_zero) {
+        // 所有索引都是 0
+        auto result = std::make_unique<IntegerIRValue>();
+        result->value = 0;
+        return result;
+    }
+    
+    auto result = std::make_unique<TemporaryIRValue>();
+    result->temp_name = accumulator;
+    return result;
+}

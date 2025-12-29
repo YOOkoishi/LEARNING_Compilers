@@ -174,12 +174,24 @@ FuncFParams
 
 FuncFParam
   : BType IDENT {
-    auto ast = make_unique<FuncFParamAST>();
+    auto ast = make_unique<FuncFParamAST>(FuncFParamAST::VAR);
     ast -> btype = unique_ptr<BaseAST>($1);
     ast -> ident = *unique_ptr<std::string>($2);
     $$ = ast.release();
   }
-
+  | BType IDENT '[' ']'{
+    auto ast = make_unique<FuncFParamAST>(FuncFParamAST::ONEDARRAY);
+    ast -> btype = unique_ptr<BaseAST>($1);
+    ast -> ident = *unique_ptr<std::string>($2);
+    $$ = ast.release();
+  }
+  | BType IDENT '[' ']' ArrayDeclarator {
+    auto ast = make_unique<FuncFParamAST>(FuncFParamAST::MULTIARRAY);
+    ast -> btype = unique_ptr<BaseAST>($1);
+    ast -> ident = *unique_ptr<std::string>($2);
+    ast -> arraydeclarator = unique_ptr<BaseAST>($5);
+    $$ = ast.release();
+  }
 
 
 

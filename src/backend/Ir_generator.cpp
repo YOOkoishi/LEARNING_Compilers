@@ -273,14 +273,27 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         
         // 4. 生成 store 指令
         if (lval->type == LValAST::ARRAY) {
-            // Array assignment: arr[i] = val
-            auto index_val = visitExp(dynamic_cast<ExpAST*>(lval->address.get()));
+            // Array assignment: arr[i][j][k] = val -> 使用线性索引
+            auto index_list = dynamic_cast<ExpListAST*>(lval->address.get());
             
+            // 收集所有索引的IR值
+            std::vector<std::unique_ptr<BaseIRValue>> indices;
+            for(auto &item : index_list->explist){
+                if(auto exp_item = dynamic_cast<ExpAST*>(item.get())){
+                    auto index_val = visitExp(exp_item);
+                    indices.push_back(std::move(index_val));
+                }    
+            }
+            
+            // 计算线性索引
+            auto linear_index = calculate_linear_index(indices, symbol->array_dims);
+            
+            // 生成单个 getelemptr
             auto gep = std::make_unique<GetElemPtrIRValue>();
             std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
             gep->result_name = ptr_name;
             gep->src = symbol->ir_name;
-            gep->index = std::move(index_val);
+            gep->index = std::move(linear_index);
             ctx.current_block->ADD_Value(std::move(gep));
             
             auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), ptr_name);
@@ -611,7 +624,7 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
                     auto global_alloc = std::make_unique<GlobalAllocIRValue>();
                     global_alloc->type = GlobalAllocIRValue::ARRAY;
                     global_alloc->var_name = ir_name;
-                    global_alloc->data_type = generate_data_type(dims);
+                    global_alloc->data_type = "[i32 ," + std::to_string(array_size) + "]";
                     global_alloc->init_list = initval;
                     global_alloc->float_size = array_size;
                     program->global_value.push_back(std::move(global_alloc));
@@ -620,7 +633,7 @@ void IRGenerator::visitConstDef(const ConstDefAST* ast){
                     auto alloc = std::make_unique<AllocIRValue>();
                     alloc->type = AllocIRValue::ARRAY;
                     alloc->var_name = ir_name;
-                    alloc->data_type = generate_data_type(dims);
+                    alloc->data_type ="[i32 ," + std::to_string(array_size) + "]";
                     alloc->size = array_size * 4;
                     ctx.current_block->ADD_Value(std::move(alloc));
     
@@ -788,7 +801,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             auto global_alloc = std::make_unique<GlobalAllocIRValue>();
             global_alloc->type = GlobalAllocIRValue::ARRAY;
             global_alloc->var_name = ir_name;
-            global_alloc->data_type = generate_data_type(dims);
+            global_alloc->data_type = "[i32 ," + std::to_string(array_size) + "]";
             global_alloc->float_size = array_size; 
 
             if(ast->type == VarDefAST::ARRAYDEF){
@@ -801,7 +814,7 @@ void IRGenerator::visitVarDef(const VarDefAST* ast){
             auto alloc = std::make_unique<AllocIRValue>();
             alloc->type = AllocIRValue::ARRAY;
             alloc->var_name = ir_name;
-            alloc->data_type = generate_data_type(dims);
+            alloc->data_type = "[i32 ," + std::to_string(array_size) + "]";
             alloc->size = array_size * 4;
             ctx.current_block->ADD_Value(std::move(alloc));
             
@@ -1379,29 +1392,38 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
             } 
 
             if (lval->type == LValAST::ARRAY) {
-                // Array access: arr[i]
+                // Array access: arr[i][j][k] -> 使用线性索引 i*D1*D2 + j*D2 + k
                 auto index_list = dynamic_cast<ExpListAST*>(lval->address.get());
-                std::string mid_result_name = symbol->ir_name;
+                
+                // 收集所有索引的IR值
+                std::vector<std::unique_ptr<BaseIRValue>> indices;
                 for(auto &item : index_list->explist){
                     if(auto exp = dynamic_cast<ExpAST*>(item.get())){
                         auto index_val = visitExp(exp);
-                        auto gep = std::make_unique<GetElemPtrIRValue>();
-                        std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
-                        gep->result_name = ptr_name;
-                        gep->src = mid_result_name;
-                        gep->index = std::move(index_val);
-                        ctx.current_block->ADD_Value(std::move(gep));
-                        mid_result_name = ptr_name;
-                        
+                        indices.push_back(std::move(index_val));
                     }    
                 }
+                
+                // 计算线性索引
+                auto linear_index = calculate_linear_index(indices, symbol->array_dims);
+                
+                // 生成单个 getelemptr
+                auto gep = std::make_unique<GetElemPtrIRValue>();
+                std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                gep->result_name = ptr_name;
+                gep->src = symbol->ir_name;
+                gep->index = std::move(linear_index);
+                ctx.current_block->ADD_Value(std::move(gep));
+                
+                // Load 值
                 std::string temp_name = generate_temp_name();
                 auto load = std::make_unique<LoadIRValue>();
                 load->result_name = temp_name;
-                load->src = mid_result_name;
+                load->src = ptr_name;
                 ctx.current_block->ADD_Value(std::move(load));
+                
                 auto temp = std::make_unique<TemporaryIRValue>();
-                temp->temp_name = mid_result_name;
+                temp->temp_name = temp_name;
                 return temp;
             } else {
                 if(symbol -> type == SymbolType::CONST){

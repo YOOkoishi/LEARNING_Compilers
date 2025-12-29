@@ -184,6 +184,13 @@ public:
     std::vector<int> flatten_const_array(const ConstInitValAST* initval, const std::vector<int>& dims);
     
     std::string generate_data_type(const std::vector<int>& dims);
+    
+    // 多维数组线性索引计算
+    // 根据多维索引和数组维度，计算线性索引并返回结果IR
+    // 例如: arr[i][j] 其中 arr 是 int[M][N]，计算 i*N + j
+    std::unique_ptr<BaseIRValue> calculate_linear_index(
+        const std::vector<std::unique_ptr<BaseIRValue>>& indices,
+        const std::vector<int>& dims);
 
     void setCurrentBlock(IRBasicBlock* block){
         ctx.current_block = block;

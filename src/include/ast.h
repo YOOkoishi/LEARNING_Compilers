@@ -77,8 +77,19 @@ public:
 
 class FuncFParamAST : public BaseAST {
 public:
+    enum Type {
+        VAR,
+        ONEDARRAY,
+        MULTIARRAY
+    } type;
+
+    FuncFParamAST() = default;
+    FuncFParamAST(Type t): type(t) {};
+
+
     std::unique_ptr<BaseAST> btype;
     std::string ident;
+    std::unique_ptr<BaseAST> arraydeclarator;
     void Dump() const override;
 };
 
