@@ -151,6 +151,21 @@ public :
 };
 
 
+class GetPtrIRValue : public BaseIRValue {
+public:
+
+    std::string result_name;
+    std::string src;
+    std::unique_ptr<BaseIRValue> index;
+
+    GetPtrIRValue() = default;
+    GetPtrIRValue(const std::string& r, const std::string& s,std::unique_ptr<BaseIRValue> i): result_name(r),src(s),index(std::move(i)){};
+
+    void Dump() const override;
+    void To_RiscV() const override;
+};
+
+
 
 
 class StoreIRValue : public BaseIRValue{

@@ -22,6 +22,7 @@ public:
     std::string ir_name;    // IR 中的唯一名字
     SymbolType type;
     DataType datatype;
+    bool is_array_param;
     int scope_level;
     int const_value;
     std::vector<int> array_dims;
@@ -36,6 +37,12 @@ public:
         return 0;
     }
 
+    bool get_is_array_param(){
+        if(datatype == DataType::ARRAY){
+            return is_array_param;
+        }
+        return false;
+    }
 
     Symbol() = default;
     Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, int val = 0)
@@ -43,8 +50,8 @@ public:
 
     // Constructor for arrays
     Symbol(const std::string& n, const std::string& ir, SymbolType t, DataType dt, int lvl, 
-           const std::vector<int>& dims, const std::vector<int>& vals = {})
-        : name(n), ir_name(ir), type(t), datatype(dt), scope_level(lvl), const_value(0), 
+           const std::vector<int>& dims, const std::vector<int>& vals = {}, bool is_param = false)
+        : name(n), ir_name(ir), type(t), datatype(dt), is_array_param(is_param), scope_level(lvl), const_value(0), 
           array_dims(dims), const_array_values(vals) {}
 };
 
@@ -104,9 +111,11 @@ public:
         return ir_name;
     }
 
+    
+
     // 声明数组符号
     std::string declareArray(const std::string& name, SymbolType type, DataType datatype, 
-                             const std::vector<int>& dims, const std::vector<int>& values = {}) {
+                             const std::vector<int>& dims, const std::vector<int>& values = {},bool is_param = false) {
         auto& current_scope = symbol_table.back();
         
         if (current_scope.find(name) != current_scope.end()) {
@@ -114,7 +123,7 @@ public:
         }
         
         std::string ir_name = generateIRName(name);
-        auto symbol = std::make_shared<Symbol>(name, ir_name, type, datatype, current_scope_level, dims, values);
+        auto symbol = std::make_shared<Symbol>(name, ir_name, type, datatype, current_scope_level, dims, values, is_param);
         current_scope[name] = symbol;
         return ir_name;
     }

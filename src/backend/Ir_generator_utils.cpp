@@ -518,21 +518,57 @@ std::unique_ptr<BaseIRValue> IRGenerator::calculate_linear_index(
         return zero;
     }
     
-    // 如果只有一个索引，直接返回它的副本
+    // 如果只有一个索引，需要考虑剩余维度的乘积作为 stride
     if (indices.size() == 1) {
-        // 创建一个临时变量来存储索引值
-        // 先看看索引是否是整数常量
-        if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[0].get())) {
-            auto result = std::make_unique<IntegerIRValue>();
-            result->value = int_val->value;
-            return result;
+        // 计算剩余维度的乘积
+        int stride = 1;
+        for (size_t d = 1; d < dims.size(); ++d) {
+            stride *= dims[d];
         }
-        // 否则是临时变量
-        if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[0].get())) {
-            auto result = std::make_unique<TemporaryIRValue>();
-            result->temp_name = temp_val->temp_name;
-            return result;
+        
+        if (stride == 1) {
+            // stride 为 1，直接返回索引
+            if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[0].get())) {
+                auto result = std::make_unique<IntegerIRValue>();
+                result->value = int_val->value;
+                return result;
+            }
+            if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[0].get())) {
+                auto result = std::make_unique<TemporaryIRValue>();
+                result->temp_name = temp_val->temp_name;
+                return result;
+            }
+        } else {
+            // stride > 1，需要乘以 stride
+            if (auto int_val = dynamic_cast<IntegerIRValue*>(indices[0].get())) {
+                // 编译时计算常量乘法
+                auto result = std::make_unique<IntegerIRValue>();
+                result->value = int_val->value * stride;
+                return result;
+            }
+            if (auto temp_val = dynamic_cast<TemporaryIRValue*>(indices[0].get())) {
+                // 生成运行时乘法
+                std::string mul_result = generate_temp_name();
+                auto mul_ir = std::make_unique<BinaryIRValue>();
+                mul_ir->result_name = mul_result;
+                mul_ir->operation = BinaryIRValue::MUL;
+                
+                auto left = std::make_unique<TemporaryIRValue>();
+                left->temp_name = temp_val->temp_name;
+                mul_ir->left = std::move(left);
+                
+                auto right = std::make_unique<IntegerIRValue>();
+                right->value = stride;
+                mul_ir->right = std::move(right);
+                
+                ctx.current_block->ADD_Value(std::move(mul_ir));
+                
+                auto result = std::make_unique<TemporaryIRValue>();
+                result->temp_name = mul_result;
+                return result;
+            }
         }
+        
         // 其他情况，生成一个 add 0 指令
         std::string result_name = generate_temp_name();
         auto add_ir = std::make_unique<BinaryIRValue>();
@@ -562,11 +598,23 @@ std::unique_ptr<BaseIRValue> IRGenerator::calculate_linear_index(
     
     // 计算每个维度的 stride
     // stride[i] = dims[i+1] * dims[i+2] * ... * dims[n-1]
+    // 注意：对于部分索引，stride 应该包含剩余维度的乘积
+    // 例如：arr[10][20][30]，访问 arr[i] 时，stride[0] = 20*30 = 600
+    //       访问 arr[i][j] 时，stride[0] = 20*30 = 600, stride[1] = 30
     std::vector<int> strides(indices.size());
-    strides[indices.size() - 1] = 1;  // 最后一维的 stride 是 1
+    
+    // 首先计算从 dims 末尾到 indices.size() 位置的乘积作为基础 stride
+    int base_stride = 1;
+    for (size_t d = indices.size(); d < dims.size(); ++d) {
+        base_stride *= dims[d];
+    }
+    
+    // 最后一个索引的 stride 是剩余维度的乘积
+    strides[indices.size() - 1] = base_stride;
+    
+    // 从后往前计算每个索引的 stride
     for (int i = static_cast<int>(indices.size()) - 2; i >= 0; --i) {
         // stride[i] = stride[i+1] * dims[i+1]
-        // 注意：dims[i+1] 对应的是数组声明中第 i+1 维的大小
         if (i + 1 < static_cast<int>(dims.size())) {
             strides[i] = strides[i + 1] * dims[i + 1];
         } else {

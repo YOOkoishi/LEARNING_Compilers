@@ -81,11 +81,21 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
         if(auto funcfs = dynamic_cast<const FuncFParamsAST*>(ast -> funcfparams.get())){
             for(auto& i : funcfs ->funcflist){
                 if(auto funcf = dynamic_cast<FuncFParamAST*>(i.get())){
-                    std::string param_name = funcf->ident;
-                    // Use %arg_ prefix for parameters to avoid conflict with globals (@) and locals (%)
-                    std::string ir_param_name = "%arg_" + param_name; 
+                    if(funcf->type == FuncFParamAST::VAR){
+                        std::string param_name = funcf->ident;
+                        // Use %arg_ prefix for parameters to avoid conflict with globals (@) and locals (%)
+                        std::string ir_param_name = "%arg_" + param_name; 
+                        
+                        ir_fun ->funcfparams.push_back({ir_param_name, "i32"});
+                    }
+                    else {
+                        std::string param_name = funcf->ident;
+                        // Use %arg_ prefix for parameters to avoid conflict with globals (@) and locals (%)
+                        std::string ir_param_name = "%arg_" + param_name; 
+                        
+                        ir_fun ->funcfparams.push_back({ir_param_name, "*i32"});
                     
-                    ir_fun ->funcfparams.push_back({ir_param_name, "i32"});
+                    }
                 }
             }
         }   
@@ -112,19 +122,53 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
                     std::string param_name = funcf->ident;
                     std::string ir_param_name = "%arg_" + param_name;
                     
-                    // Declare local var for param
-                    std::string local_var = ctx.symbol_table->declare(param_name, SymbolType::VAR, DataType::INT);
-                    
-                    // Alloc
-                    auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR ,local_var, "i32");
-                    ctx.current_block->ADD_Value(std::move(alloc));
-                    
-                    // Store
-                    auto param_val = std::make_unique<TemporaryIRValue>();
-                    param_val->temp_name = ir_param_name;
-                    
-                    auto store = std::make_unique<StoreIRValue>(std::move(param_val), local_var);
-                    ctx.current_block->ADD_Value(std::move(store));
+                    if(funcf ->type == FuncFParamAST::VAR){
+                        // Declare local var for param
+                        std::string local_var = ctx.symbol_table->declare(param_name, SymbolType::VAR, DataType::INT);
+                        
+                        // Alloc
+                        auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::VAR ,local_var, "i32");
+                        ctx.current_block->ADD_Value(std::move(alloc));
+                        
+                        // Store
+                        auto param_val = std::make_unique<TemporaryIRValue>();
+                        param_val->temp_name = ir_param_name;
+                        
+                        auto store = std::make_unique<StoreIRValue>(std::move(param_val), local_var);
+                        ctx.current_block->ADD_Value(std::move(store));
+                    }
+                    else{
+                        // Declare local array for param - 使用 declareArray 并标记为数组形参
+                        // 收集数组维度信息（第一维为0表示未知大小）
+                        std::vector<int> dims;
+                        dims.push_back(0);  // 第一维未知
+                        
+                        // 如果是多维数组形参，提取后续维度
+                        if(funcf->type == FuncFParamAST::MULTIARRAY) {
+                            if(auto arr_decl = dynamic_cast<ConstExpListAST*>(funcf->arraydeclarator.get())) {
+                                for(auto& dim_exp : arr_decl->constexplist) {
+                                    int dim_size = evaluateConstExp(dim_exp.get());
+                                    dims.push_back(dim_size);
+                                }
+                            }
+                        }
+                        
+                        std::string local_array = ctx.symbol_table->declareArray(
+                            param_name, SymbolType::VAR, DataType::ARRAY, dims, {}, true);
+                        
+                        // Alloc
+                        auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::ARRAY ,local_array, "*i32");
+                        ctx.current_block->ADD_Value(std::move(alloc));
+                        
+                        // Store
+                        auto param_val = std::make_unique<TemporaryIRValue>();
+                        param_val->temp_name = ir_param_name;
+                        
+                        auto store = std::make_unique<StoreIRValue>(std::move(param_val), local_array);
+                        ctx.current_block->ADD_Value(std::move(store));
+ 
+                        
+                    }
                 }
             }
         }   
@@ -275,6 +319,7 @@ void IRGenerator::visitStmt(const StmtAST* ast){
         if (lval->type == LValAST::ARRAY) {
             // Array assignment: arr[i][j][k] = val -> 使用线性索引
             auto index_list = dynamic_cast<ExpListAST*>(lval->address.get());
+            auto is_param = symbol->get_is_array_param();
             
             // 收集所有索引的IR值
             std::vector<std::unique_ptr<BaseIRValue>> indices;
@@ -288,13 +333,30 @@ void IRGenerator::visitStmt(const StmtAST* ast){
             // 计算线性索引
             auto linear_index = calculate_linear_index(indices, symbol->array_dims);
             
-            // 生成单个 getelemptr
-            auto gep = std::make_unique<GetElemPtrIRValue>();
-            std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
-            gep->result_name = ptr_name;
-            gep->src = symbol->ir_name;
-            gep->index = std::move(linear_index);
-            ctx.current_block->ADD_Value(std::move(gep));
+            std::string ptr_name;
+            if(is_param) {
+                // 数组形参：先 load 指针，再用 getptr
+                std::string ptr_src = generate_temp_name();
+                auto load_ir = std::make_unique<LoadIRValue>();
+                load_ir->result_name = ptr_src;
+                load_ir->src = symbol->ir_name;
+                ctx.current_block->ADD_Value(std::move(load_ir));
+                
+                auto gtp = std::make_unique<GetPtrIRValue>();
+                ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                gtp->result_name = ptr_name;
+                gtp->src = ptr_src;
+                gtp->index = std::move(linear_index);
+                ctx.current_block->ADD_Value(std::move(gtp));
+            } else {
+                // 普通数组：getelemptr
+                auto gep = std::make_unique<GetElemPtrIRValue>();
+                ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                gep->result_name = ptr_name;
+                gep->src = symbol->ir_name;
+                gep->index = std::move(linear_index);
+                ctx.current_block->ADD_Value(std::move(gep));
+            }
             
             auto store_ir = std::make_unique<StoreIRValue>(std::move(rhs_value), ptr_name);
             ctx.current_block->ADD_Value(std::move(store_ir));
@@ -1394,6 +1456,7 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
             if (lval->type == LValAST::ARRAY) {
                 // Array access: arr[i][j][k] -> 使用线性索引 i*D1*D2 + j*D2 + k
                 auto index_list = dynamic_cast<ExpListAST*>(lval->address.get());
+                auto is_param = symbol->get_is_array_param();
                 
                 // 收集所有索引的IR值
                 std::vector<std::unique_ptr<BaseIRValue>> indices;
@@ -1404,29 +1467,109 @@ std::unique_ptr<BaseIRValue> IRGenerator::visitPrimaryExp(const PrimaryExpAST* a
                     }    
                 }
                 
+                // 判断是否为部分索引（索引数量 < 维度数量）
+                // 对于数组形参，dims 可能为空或第一维为0，需要特殊处理
+                size_t num_dims = symbol->array_dims.size();
+                size_t num_indices = indices.size();
+                bool is_partial_index = (num_indices < num_dims);
+                
                 // 计算线性索引
                 auto linear_index = calculate_linear_index(indices, symbol->array_dims);
                 
-                // 生成单个 getelemptr
-                auto gep = std::make_unique<GetElemPtrIRValue>();
-                std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
-                gep->result_name = ptr_name;
-                gep->src = symbol->ir_name;
-                gep->index = std::move(linear_index);
-                ctx.current_block->ADD_Value(std::move(gep));
-                
-                // Load 值
-                std::string temp_name = generate_temp_name();
-                auto load = std::make_unique<LoadIRValue>();
-                load->result_name = temp_name;
-                load->src = ptr_name;
-                ctx.current_block->ADD_Value(std::move(load));
-                
-                auto temp = std::make_unique<TemporaryIRValue>();
-                temp->temp_name = temp_name;
-                return temp;
+                if(is_param){
+                    // 数组形参：先 load 指针，再用 getptr
+                    std::string ptr_src = generate_temp_name();
+                    auto load_ir1 = std::make_unique<LoadIRValue>();
+                    load_ir1->result_name = ptr_src;
+                    load_ir1->src = symbol->ir_name;
+                    ctx.current_block->ADD_Value(std::move(load_ir1));
+
+                    auto gtp = std::make_unique<GetPtrIRValue>();
+                    std::string ptr_name = "%ptr_nm_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                    gtp->src = ptr_src;
+                    gtp->result_name = ptr_name; 
+                    gtp->index = std::move(linear_index);
+                    ctx.current_block->ADD_Value(std::move(gtp));
+
+                    if(is_partial_index) {
+                        // 部分索引：返回地址，不 load
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = ptr_name;
+                        return temp;
+                    } else {
+                        // 完整索引：load 值
+                        std::string temp_name = generate_temp_name();
+                        auto load_ir2 = std::make_unique<LoadIRValue>();
+                        load_ir2->result_name = temp_name;
+                        load_ir2->src = ptr_name;
+                        ctx.current_block->ADD_Value(std::move(load_ir2));
+                        
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = temp_name;
+                        return temp;
+                    }
+                }
+                else{
+                    // 普通数组：getelemptr
+                    auto gep = std::make_unique<GetElemPtrIRValue>();
+                    std::string ptr_name = "%ptr_ar_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                    gep->result_name = ptr_name;
+                    gep->src = symbol->ir_name;
+                    gep->index = std::move(linear_index);
+                    ctx.current_block->ADD_Value(std::move(gep));
+                    
+                    if(is_partial_index) {
+                        // 部分索引：返回地址，不 load
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = ptr_name;
+                        return temp;
+                    } else {
+                        // 完整索引：load 值
+                        std::string temp_name = generate_temp_name();
+                        auto load = std::make_unique<LoadIRValue>();
+                        load->result_name = temp_name;
+                        load->src = ptr_name;
+                        ctx.current_block->ADD_Value(std::move(load));
+                        
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = temp_name;
+                        return temp;
+                    }
+                }
             } else {
-                if(symbol -> type == SymbolType::CONST){
+                // lval->type == LValAST::VAR（没有索引）
+                if(symbol->datatype == DataType::ARRAY) {
+                    // 数组名作为实参：传递数组首地址
+                    // 对于普通数组：getelemptr @arr, 0
+                    // 对于数组形参：load %arr（已经是指针）
+                    auto is_param = symbol->get_is_array_param();
+                    
+                    if(is_param) {
+                        // 数组形参：load 出指针值直接返回
+                        std::string ptr_val = generate_temp_name();
+                        auto load = std::make_unique<LoadIRValue>();
+                        load->result_name = ptr_val;
+                        load->src = symbol->ir_name;
+                        ctx.current_block->ADD_Value(std::move(load));
+                        
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = ptr_val;
+                        return temp;
+                    } else {
+                        // 普通数组：getelemptr 获取首地址
+                        auto gep = std::make_unique<GetElemPtrIRValue>();
+                        std::string ptr_name = "%ptr_" + symbol->ir_name.substr(1) + "_" + std::to_string(blockcount++);
+                        gep->result_name = ptr_name;
+                        gep->src = symbol->ir_name;
+                        gep->index = std::make_unique<IntegerIRValue>(0);
+                        ctx.current_block->ADD_Value(std::move(gep));
+                        
+                        auto temp = std::make_unique<TemporaryIRValue>();
+                        temp->temp_name = ptr_name;
+                        return temp;
+                    }
+                }
+                else if(symbol -> type == SymbolType::CONST){
                     auto value = std::make_unique<IntegerIRValue>();
                     value -> value = symbol ->const_value;
                     return value;

@@ -77,7 +77,7 @@ int main(int argc, const char *argv[]) {
   
   auto ir_fin = ir.get_irprogram();
   if(mode_str == "-koopa")ir_fin -> DumpFunction();
-  else if(mode_str == "-riscv")ir_fin -> To_RiscV();
+  else if(mode_str == "-riscv"||mode_str == "-perf")ir_fin -> To_RiscV();
   
   cout << endl;
   return 0;

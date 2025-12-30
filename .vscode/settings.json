@@ -80,6 +80,8 @@
         "stack": "cpp",
         "typeindex": "cpp",
         "cfenv": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "*.koopa": "llvm",
+        "*.koop": "llvm"
     }
 }
