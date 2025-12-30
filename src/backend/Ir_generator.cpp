@@ -156,8 +156,9 @@ void IRGenerator::visitFunDef(const FunDefAST* ast){
                         std::string local_array = ctx.symbol_table->declareArray(
                             param_name, SymbolType::VAR, DataType::ARRAY, dims, {}, true);
                         
-                        // Alloc
+                        // Alloc - 对于指针类型，只需要 4 字节存储指针
                         auto alloc = std::make_unique<AllocIRValue>(AllocIRValue::ARRAY ,local_array, "*i32");
+                        alloc->size = 4;  // 指针大小为 4 字节
                         ctx.current_block->ADD_Value(std::move(alloc));
                         
                         // Store

@@ -62,6 +62,9 @@ void IRFunction::To_RiscV() const{
             else if(auto* ptr = dynamic_cast<GetElemPtrIRValue*>(value.get())){
                 ctx.stack.allocate(ptr->result_name);
             }
+            else if(auto* ptr = dynamic_cast<GetPtrIRValue*>(value.get())){
+                ctx.stack.allocate(ptr->result_name);
+            }
             else if(auto* call = dynamic_cast<CallIRValue*>(value.get())){
                 has_call = true;
                 int args_count = call->funcrparams.size();
